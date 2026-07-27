@@ -1,0 +1,37 @@
+# Secrets — never commit API keys
+.env
+.env.*
+!.env.example
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Tool caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# macOS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Claude Code local overrides (a shared settings.json stays tracked)
+.claude/settings.local.json
+
+# Wardrobe photos — personal, and binaries bloat git history permanently.
+# Delete this line if you'd rather version the images.
+clothes/
