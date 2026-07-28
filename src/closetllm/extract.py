@@ -2,7 +2,7 @@ from pathlib import Path
 
 from anthropic import Anthropic
 
-from closetllm.config import garment_model, palette_model
+from closetllm.config import clothing_model, color_palette_model
 from closetllm.images import image_block
 
 client = Anthropic()
@@ -14,7 +14,7 @@ clothing_prompt = (
     "Ignore the background, skin, hair, and any surroundings."
 )
 
-color_pallete_tools = [
+color_palette_tools = [
     {
         "name": "extract_colors",
         "description": "Extract two dominant colors from Pinterest photo as HEX codes.",
@@ -57,7 +57,7 @@ clothing_tools = [
 def extract_clothing_colors(path: Path) -> dict:
     """Identify the garment in the photo. Returns {"item": str, "colors": list}."""
     response = client.messages.create(
-        model=garment_model,
+        model=clothing_model,
         max_tokens=1024,
         tools=clothing_tools,
         tool_choice={"type": "tool", "name": "extract_clothing_colors"},
@@ -70,12 +70,12 @@ def extract_clothing_colors(path: Path) -> dict:
 
 def extract_color_palette(path: Path) -> dict:
     response = client.messages.create(
-        model=palette_model,
+        model=color_palette_model,
         max_tokens=1024,
-        tools=palette_tools,
+        tools=color_palette_tools,
         tool_choice={"type": "tool", "name": "extract_colors"},
         messages=[
-            {"role": "user", "content": [image_block(path), {"type": "text", "text": palette_prompt}]}
+            {"role": "user", "content": [image_block(path), {"type": "text", "text": color_palette_prompt}]}
         ],
     )
     return next(block.input for block in response.content if block.type == "tool_use")

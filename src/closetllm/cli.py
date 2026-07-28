@@ -4,8 +4,8 @@ import argparse
 from pathlib import Path
 from typing import Iterator
 
-from closetllm.config import clothes_folder, img_types, palettes_folder
-from closetllm.extract import extract_garment_colors, extract_palette_colors
+from closetllm.config import clothes_folder, color_palettes_folder, img_types
+from closetllm.extract import extract_clothing_colors, extract_color_palette
 
 
 def images_in(folder: Path) -> Iterator[Path]:
@@ -17,13 +17,13 @@ def images_in(folder: Path) -> Iterator[Path]:
 
 def run_clothes(folder: Path) -> None:
     for photo in images_in(folder):
-        result = extract_garment_colors(photo)
+        result = extract_clothing_colors(photo)
         print(f"{photo.name}: {result['item']} -> {', '.join(result['colors'])}")
 
 
 def run_palettes(folder: Path) -> None:
     for photo in images_in(folder):
-        result = extract_palette_colors(photo)
+        result = extract_color_palette(photo)
         print(f"{photo.name}: {result['colors']}")
 
 
@@ -36,7 +36,7 @@ def main() -> None:
     clothes.set_defaults(run=run_clothes)
 
     palettes = commands.add_parser("palettes", help="extract colors from palette photos")
-    palettes.add_argument("folder", nargs="?", type=Path, default=palettes_folder)
+    palettes.add_argument("folder", nargs="?", type=Path, default=color_palettes_folder)
     palettes.set_defaults(run=run_palettes)
 
     args = parser.parse_args()
