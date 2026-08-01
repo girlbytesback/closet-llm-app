@@ -10,12 +10,14 @@ from closetllm.config import max_edge
 
 
 def image_block(path: Path) -> dict:
-    """Downscale the image and return it as a base64 JPEG content block."""
+    #load image from disk and convert to RGB
     img = Image.open(path).convert("RGB")
+    #shrink
     img.thumbnail((max_edge, max_edge))
-
+    #resaves to memory locally?
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=85)
+    #saves to RAM, not disk. 
 
     return {
         "type": "image",

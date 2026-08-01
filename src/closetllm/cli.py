@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Iterator
 
 from closetllm.config import clothes_folder, color_palettes_folder, img_types
-from closetllm.extract import extract_clothing_colors, extract_color_palette
+from closetllm.extract import extract_clothing_colors, run_color_palettes
 
 
 def images_in(folder: Path) -> Iterator[Path]:
@@ -22,9 +22,7 @@ def run_clothes(folder: Path) -> None:
 
 
 def run_palettes(folder: Path) -> None:
-    for photo in images_in(folder):
-        result = extract_color_palette(photo)
-        print(f"{photo.name}: {result['colors']}")
+    run_color_palettes(folder)
 
 
 def main() -> None:

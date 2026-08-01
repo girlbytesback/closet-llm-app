@@ -1,10 +1,13 @@
-"""Settings that more than one module needs: where images live, which model each
-extraction calls, and how large an image may be when it goes over the wire."""
-
+#VARIABLES AND CONSTANTS
 from pathlib import Path
 
 clothes_folder = Path("clothes")
 color_palettes_folder = Path("color-palettes")
+
+# Extracted palettes are saved here so each photo costs one model call ever. The
+# model doesn't return the same HEX codes twice for the same image, so this file
+# is also what keeps the palettes stable between runs.
+palettes_file = Path("data/colors.json")
 
 img_types = {".jpeg", ".jpg", ".png"}
 
