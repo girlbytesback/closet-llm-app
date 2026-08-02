@@ -4,8 +4,8 @@ import argparse
 from pathlib import Path
 from typing import Iterator
 
-from closetllm.config import clothes_folder, color_palettes_folder, img_types
-from closetllm.extract import extract_clothing_colors, run_color_palettes
+from closetllm.config import closet_clothing_folder, pinterest_board_folder, img_types
+from closetllm.extract import run_closet_colors, run_color_palettes
 
 
 def images_in(folder: Path) -> Iterator[Path]:
@@ -16,9 +16,7 @@ def images_in(folder: Path) -> Iterator[Path]:
 
 
 def run_clothes(folder: Path) -> None:
-    for photo in images_in(folder):
-        result = extract_clothing_colors(photo)
-        print(f"{photo.name}: {result['item']} -> {', '.join(result['colors'])}")
+    run_closet_colors(folder)
 
 
 def run_palettes(folder: Path) -> None:
@@ -30,11 +28,11 @@ def main() -> None:
     commands = parser.add_subparsers(dest="command", required=True)
 
     clothes = commands.add_parser("clothes", help="extract colors from clothing photos")
-    clothes.add_argument("folder", nargs="?", type=Path, default=clothes_folder)
+    clothes.add_argument("folder", nargs="?", type=Path, default=closet_clothing_folder)
     clothes.set_defaults(run=run_clothes)
 
     palettes = commands.add_parser("palettes", help="extract colors from palette photos")
-    palettes.add_argument("folder", nargs="?", type=Path, default=color_palettes_folder)
+    palettes.add_argument("folder", nargs="?", type=Path, default=pinterest_board_folder)
     palettes.set_defaults(run=run_palettes)
 
     args = parser.parse_args()
