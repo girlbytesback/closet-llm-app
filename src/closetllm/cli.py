@@ -15,28 +15,24 @@ def images_in(folder: Path) -> Iterator[Path]:
             yield path
 
 
-def run_clothes(folder: Path) -> None:
-    run_closet_colors(folder)
-
-
-def run_palettes(folder: Path) -> None:
-    run_color_palettes(folder)
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(prog="closetllm")
     commands = parser.add_subparsers(dest="command", required=True)
 
     clothes = commands.add_parser("clothes", help="extract colors from clothing photos")
     clothes.add_argument("folder", nargs="?", type=Path, default=closet_clothing_folder)
-    clothes.set_defaults(run=run_clothes)
+    clothes.set_defaults(run=run_closet_colors)
 
     palettes = commands.add_parser("palettes", help="extract colors from palette photos")
     palettes.add_argument("folder", nargs="?", type=Path, default=pinterest_board_folder)
-    palettes.set_defaults(run=run_palettes)
+    palettes.set_defaults(run=run_color_palettes)
 
     args = parser.parse_args()
-    args.run(args.folder)
+    try:
+        args.run(args.folder)
+    except FileNotFoundError as err:
+        # a missing photos folder is user error, not a bug — no traceback needed
+        raise SystemExit(f"{parser.prog}: {err}")
 
 
 if __name__ == "__main__":
