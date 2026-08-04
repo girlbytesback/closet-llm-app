@@ -1,9 +1,11 @@
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable, List
 
 from anthropic import Anthropic
-
+from closetllm.images import image_block
 from closetllm.config import (
     closet_clothing_model,
     pinterest_board_model,
@@ -13,10 +15,9 @@ from closetllm.config import (
     pinterest_hex_colors,
     closet_hex_colors,
 )
-from closetllm.images import image_block
 
 client = Anthropic()
-
+regex_hex = re.compile(r"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 
 @dataclass(frozen=True)
 class ExtractPhotoDetails:
@@ -29,7 +30,6 @@ class ExtractPhotoDetails:
     def tool_name(self) -> str:
         # read the name back out of the tool so it can't drift out of sync
         return self.tool["name"]
-
 
 palette_job = ExtractPhotoDetails(
     model=pinterest_board_model,
@@ -80,7 +80,6 @@ clothing_job = ExtractPhotoDetails(
     json_data=closet_hex_colors,
 )
 
-
 # one model call for one photo; returns whatever the tool's schema promised
 def extract_colors(path: Path, job: ExtractPhotoDetails) -> dict:
     response = client.messages.create(
@@ -101,7 +100,6 @@ def extract_colors(path: Path, job: ExtractPhotoDetails) -> dict:
         )
     return block.input
 
-
 # reads off disk; missing or empty file means nothing saved yet
 def load_data(path: Path) -> dict:
     if not path.exists():
@@ -109,12 +107,10 @@ def load_data(path: Path) -> dict:
     text = path.read_text()
     return json.loads(text) if text.strip() else {}
 
-
 # saves hex values to json file, creating data/ the first time
 def save_data(data: dict, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
-
 
 # walks the folder and fills in any photo we don't already have colors for
 def run(folder: Path, job: ExtractPhotoDetails) -> dict:
@@ -146,3 +142,18 @@ def run_color_palettes(folder: Path = pinterest_board_folder) -> dict:
 
 def run_closet_colors(folder: Path = closet_clothing_folder) -> dict:
     return run(folder, clothing_job)
+
+def validate_hex_value(value: str) -> str:
+    if not isinstance(value, str):
+        raise ValueError(f"not a hex color: {value!r}")
+    
+    hex_value = regex_hex.match(value.strip())
+    if not hex_value:
+        raise ValueError(f"not a hex color: {value!r}")
+    
+    digits = hex_value.group(1)
+
+    #fill in remainder of hex value to have correct amount of digits
+    if len(digits) == 3:
+        digits = "".join(c * 2 for c in digits)
+    return "#" + digits.upper()

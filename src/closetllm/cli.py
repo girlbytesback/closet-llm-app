@@ -34,6 +34,5 @@ def main() -> None:
         # a missing photos folder is user error, not a bug — no traceback needed
         raise SystemExit(f"{parser.prog}: {err}")
 
-
 if __name__ == "__main__":
     main()
