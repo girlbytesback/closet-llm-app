@@ -1,10 +1,10 @@
 import json
-import re
 from dataclasses import dataclass
 from pathlib import Path
 
 from anthropic import Anthropic
 from closetllm.images import image_block
+from closetllm.color import validate_hex_value
 from closetllm.config import (
     closet_clothing_model,
     pinterest_board_model,
@@ -15,8 +15,20 @@ from closetllm.config import (
     closet_hex_colors,
 )
 
-client = Anthropic()
-regex_hex = re.compile(r"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
+_client = None
+
+
+def client() -> Anthropic:
+    """Build the API client on first use, not at import.
+
+    Anthropic() reads the API key when it's constructed, so doing it at module
+    level would mean `closetllm match` needs a key even though it never calls
+    the API. This defers it until a call actually happens.
+    """
+    global _client
+    if _client is None:
+        _client = Anthropic()
+    return _client
 
 @dataclass(frozen=True)
 class ExtractPhotoDetails:
@@ -24,7 +36,7 @@ class ExtractPhotoDetails:
     prompt: str
     tool: dict
     json_data: Path
-    colors_key: str 
+    colors_key: str  # which key in the tool result holds the hex codes
 
     @property
     def tool_name(self) -> str:
@@ -84,7 +96,7 @@ clothing_job = ExtractPhotoDetails(
 
 # one model call for one photo; returns whatever the tool's schema promised
 def extract_colors(path: Path, job: ExtractPhotoDetails) -> dict:
-    response = client.messages.create(
+    response = client().messages.create(
         model=job.model,
         max_tokens=1024,
         tools=[job.tool],
@@ -139,21 +151,6 @@ def run(folder: Path, job: ExtractPhotoDetails) -> dict:
         print(f"{photo.name}: {', '.join(data[photo.name])} ({source})")
 
     return data
-
-def validate_hex_value(value: str) -> str:
-    if not isinstance(value, str):
-        raise ValueError(f"not a hex color: {value!r}")
-    
-    hex_value = regex_hex.match(value.strip())
-    if not hex_value:
-        raise ValueError(f"not a hex color: {value!r}")
-    
-    digits = hex_value.group(1)
-
-    #fill in remainder of hex value to have correct amount of digits
-    if len(digits) == 3:
-        digits = "".join(c * 2 for c in digits)
-    return "#" + digits.upper()
 
 def run_color_palettes(folder: Path = pinterest_board_folder) -> dict:
     return run(folder, palette_job)
