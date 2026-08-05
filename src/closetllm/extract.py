@@ -2,7 +2,6 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, List
 
 from anthropic import Anthropic
 from closetllm.images import image_block
@@ -25,6 +24,7 @@ class ExtractPhotoDetails:
     prompt: str
     tool: dict
     json_data: Path
+    colors_key: str 
 
     @property
     def tool_name(self) -> str:
@@ -33,7 +33,7 @@ class ExtractPhotoDetails:
 
 palette_job = ExtractPhotoDetails(
     model=pinterest_board_model,
-    prompt="Return the two main colors in this photo as a single HEX code",
+    prompt="Return the two main colors in this photo as HEX codes",
     tool={
         "name": "extract_colors",
         "description": "Extract two dominant colors from Pinterest photo as HEX codes.",
@@ -50,17 +50,18 @@ palette_job = ExtractPhotoDetails(
         },
     },
     json_data=pinterest_hex_colors,
+    colors_key="colors",
 )
 
 clothing_job = ExtractPhotoDetails(
     model=closet_clothing_model,
     prompt=(
-        "Extract the main colors of the clothing item in this photo as HEX codes. "
+        "Return the single most dominant color of the clothing item in this photo as a HEX code. "
         "Ignore the background, skin, hair, and any surroundings."
     ),
     tool={
         "name": "extract_clothing_colors",
-        "description": "Extract the dominant colors of the clothing item as HEX codes.",
+        "description": "Extract the dominant color of the clothing item as a HEX code.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -68,16 +69,17 @@ clothing_job = ExtractPhotoDetails(
                     "type": "string",
                     "description": "The clothing item, e.g. 'linen button-down shirt'",
                 },
-                "colors": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Dominant colors of the clothing item as HEX codes, e.g. '#A85C37'",
+                "color": {
+                    "type": "string",
+                    "pattern": "^#[0-9A-Fa-f]{6}$",
+                    "description": "Dominant color of the clothing item as a HEX code, e.g. '#A85C37'",
                 },
             },
-            "required": ["item", "colors"],
+            "required": ["item", "color"],
         },
     },
     json_data=closet_hex_colors,
+    colors_key="color",
 )
 
 # one model call for one photo; returns whatever the tool's schema promised
@@ -126,7 +128,10 @@ def run(folder: Path, job: ExtractPhotoDetails) -> dict:
         if photo.name in data:
             source = "saved"
         else:
-            data[photo.name] = extract_colors(photo, job)["colors"]
+            value = extract_colors(photo, job)[job.colors_key]
+            # palettes give a list, clothes give one string — normalize to a list
+            values = value if isinstance(value, list) else [value]
+            data[photo.name] = [validate_hex_value(v) for v in values]
             # save per photo so an interrupt doesn't throw away calls already paid for
             save_data(data, job.json_data)
             source = "new"
@@ -134,14 +139,6 @@ def run(folder: Path, job: ExtractPhotoDetails) -> dict:
         print(f"{photo.name}: {', '.join(data[photo.name])} ({source})")
 
     return data
-
-
-def run_color_palettes(folder: Path = pinterest_board_folder) -> dict:
-    return run(folder, palette_job)
-
-
-def run_closet_colors(folder: Path = closet_clothing_folder) -> dict:
-    return run(folder, clothing_job)
 
 def validate_hex_value(value: str) -> str:
     if not isinstance(value, str):
@@ -157,3 +154,9 @@ def validate_hex_value(value: str) -> str:
     if len(digits) == 3:
         digits = "".join(c * 2 for c in digits)
     return "#" + digits.upper()
+
+def run_color_palettes(folder: Path = pinterest_board_folder) -> dict:
+    return run(folder, palette_job)
+
+def run_closet_colors(folder: Path = closet_clothing_folder) -> dict:
+    return run(folder, clothing_job)
