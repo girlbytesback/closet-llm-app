@@ -1,19 +1,13 @@
-"""Hex handling and perceptual color math. No model calls, no dependencies.
-
-Every number the explainer HTML files show came out of this module. Section
-headings below name the matching visual, so you can read the code and the
-picture side by side.
-
+"""
 Nothing here talks to the API. extract.py turns photos into hex codes once and
 caches them; from that point on, matching is arithmetic that gives the same
 answer every time it runs.
 """
 
 from __future__ import annotations
-
-import re
 from math import atan2, cos, degrees, exp, hypot, radians, sin, sqrt
 from typing import Dict, List, Sequence, Tuple
+import re
 
 regex_hex = re.compile(r"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 
@@ -23,13 +17,6 @@ _WHITE = (0.95047, 1.00000, 1.08883)
 
 
 def validate_hex_value(value: str) -> str:
-    """Check a hex color and return it as '#RRGGBB', uppercase.
-
-    Raises ValueError on anything that isn't a hex color — that's how bad
-    model output gets caught. Accepts the loose spellings a model might
-    produce ('c071a8' without the hash, the 3-digit '#fa0') and normalizes
-    them so the JSON files stay consistent.
-    """
     if not isinstance(value, str):
         raise ValueError(f"not a hex color: {value!r}")
 
@@ -50,34 +37,27 @@ def hex_to_rgb(value: str) -> Tuple[float, float, float]:
 
     Base-16 arithmetic: C0 = 12*16 + 0 = 192, then divide by 255 because
     everything downstream expects fractions rather than 0-255.
+
+    calculations + numbers derived from online
     """
     digits = validate_hex_value(value).lstrip("#")
     return tuple(int(digits[i:i + 2], 16) / 255 for i in (0, 2, 4))
 
 
 def _linearize(channel: float) -> float:
-    """Stage 3. Straighten the staircase.
-
-    The 0-255 scale has uneven steps on purpose: tiny ones down in the darks
-    where your eye can tell shades apart, big ones up in the brights where it
-    can't. Great for storage, useless for measuring — 128 is halfway up the
-    scale but only about 21% of the light. This undoes the bend.
-    """
+    #undos bend in RGB curvature to make more visible to human eye
     if channel <= 0.04045:
         return channel / 12.92
     return ((channel + 0.055) / 1.055) ** 2.4
 
 
 def rgb_to_xyz(rgb: Sequence[float]) -> Tuple[float, float, float]:
-    """Stage 4. Screen -> eye.
+    """computer screen -> eye.
 
-    RGB describes what a monitor emits. XYZ describes what a human eye
-    receives. The nine constants come from 1920s experiments where people
-    matched colors by mixing three lights; they were measured, not derived.
-
-    Note the middle row: green weighs 0.715, blue only 0.072. Your eye is
-    roughly ten times more sensitive to green. That row is perceived brightness.
+    where r, g. b = computer monitor light emitting
+    and x, y, z = coordinates that translate to human eye
     """
+
     r, g, b = (_linearize(c) for c in rgb)
     return (
         0.4124564 * r + 0.3575761 * g + 0.1804375 * b,
@@ -87,20 +67,16 @@ def rgb_to_xyz(rgb: Sequence[float]) -> Tuple[float, float, float]:
 
 
 def xyz_to_lab(xyz: Sequence[float]) -> Tuple[float, float, float]:
-    """Stage 5. Even out the spacing.
-
-    Two fixes. The cube root models how perception compresses — doubling the
+    """"
+    cube root models how perception compresses — doubling the
     light doesn't double the brightness you experience. The subtractions model
     how your brain actually receives color: not as red/green/blue, but as three
     comparisons. That's why "reddish green" isn't imaginable — one channel
     can't be at both ends.
 
-        L = lightness, 0 to 100
+        l = lightness, 0 to 100
         a = green (negative) to red (positive)
         b = blue (negative) to yellow (positive)
-
-    The 216/24389 branch is the same near-black patch as in _linearize:
-    the cube root goes vertical at zero, so a straight line takes over.
     """
     def f(t: float) -> float:
         return t ** (1 / 3) if t > 216 / 24389 else (841 / 108) * t + 4 / 29
@@ -110,28 +86,23 @@ def xyz_to_lab(xyz: Sequence[float]) -> Tuple[float, float, float]:
 
 
 def hex_to_lab(value: str) -> Tuple[float, float, float]:
-    """All five stages at once. This is the one you actually call."""
+    #executes entire flow
     return xyz_to_lab(rgb_to_xyz(hex_to_rgb(value)))
 
 
 def lab_to_lch(lab: Sequence[float]) -> Tuple[float, float, float]:
-    """Same information, friendlier names: lightness, chroma, hue angle.
-
-    Visual: threshold_explainer.html, "First — your garment is one color",
-    where three hex codes turned out to be one pink at three lightnesses:
-    identical hue, identical chroma, only L moving. Shadow and highlight.
+    """
+    your garment is one color where three hex codes turned out to be one pink 
+    at three lightnesses: identical hue, identical chroma, only L moving. 
+    shadow and highlight
     """
     lightness, a, b = lab
     return (lightness, hypot(a, b), degrees(atan2(b, a)) % 360)
 
 
 def delta_e_76(lab1: Sequence[float], lab2: Sequence[float]) -> float:
-    """Plain distance between two points, three dimensions instead of two.
-
-        sqrt((L1-L2)^2 + (a1-a2)^2 + (b1-b2)^2)
-
-    Fast and decent. Slightly wrong for saturated colors — it exaggerates
-    differences in the blue region.
+    """pythagorean theorem for distancce formula 
+    sqrt((L1-L2)^2 + (a1-a2)^2 + (b1-b2)^2)
     """
     return sqrt(sum((x - y) ** 2 for x, y in zip(lab1, lab2)))
 
@@ -213,14 +184,11 @@ def delta_e_2000(lab1: Sequence[float], lab2: Sequence[float]) -> float:
         + r_t * (d_cp / s_c) * (d_hp_cap / s_h)
     )
 
-
 def distance(hex1: str, hex2: str) -> float:
     """Two hex codes in, one number out. Lower means more alike."""
     return delta_e_2000(hex_to_lab(hex1), hex_to_lab(hex2))
 
-
 default_cutoff = 25.0
-
 
 def score_garment(palette_color: str, garment_colors: Sequence[str]) -> float:
     """How close a garment gets to one palette color.
@@ -231,7 +199,6 @@ def score_garment(palette_color: str, garment_colors: Sequence[str]) -> float:
     already answers it with no change.
     """
     return min(distance(palette_color, g) for g in garment_colors)
-
 
 def matches_for_color(
     palette_color: str,
@@ -245,7 +212,6 @@ def matches_for_color(
     ]
     return sorted((h for h in hits if h[1] <= cutoff), key=lambda pair: pair[1])
 
-
 def matches_by_color(
     palette_colors: Sequence[str],
     closet: Dict[str, Sequence[str]],
@@ -258,9 +224,7 @@ def matches_by_color(
     """
     return {c: matches_for_color(c, closet, cutoff) for c in palette_colors}
 
-
 neutral_chroma = 12.0  # below this a color reads as a neutral
-
 
 def is_neutral(hex_value: str) -> bool:
     """Blacks, whites, greys, most beiges.
@@ -281,23 +245,3 @@ def hue_gap(hex1: str, hex2: str) -> float:
     h2 = lab_to_lch(hex_to_lab(hex2))[2]
     gap = abs(h1 - h2) % 360
     return 360 - gap if gap > 180 else gap
-
-
-def relationship(hex1: str, hex2: str) -> str:
-    """Name the color-theory relationship, for showing next to a score.
-
-    A match doesn't have to mean "the same color" — analogous and
-    complementary pairings are what make an outfit look deliberate.
-    """
-    if is_neutral(hex1) or is_neutral(hex2):
-        return "neutral"
-    gap = hue_gap(hex1, hex2)
-    if gap < 15:
-        return "monochrome"
-    if gap < 45:
-        return "analogous"
-    if gap < 100:
-        return "contrasting"
-    if gap < 150:
-        return "triadic"
-    return "complementary"

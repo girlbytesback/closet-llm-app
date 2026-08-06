@@ -143,6 +143,10 @@ def run(folder: Path, job: ExtractPhotoDetails) -> dict:
             value = extract_colors(photo, job)[job.colors_key]
             # palettes give a list, clothes give one string — normalize to a list
             values = value if isinstance(value, list) else [value]
+            # an empty list validates vacuously and saves clean, then blows up in
+            # score_garment's min() on a later `match` — fail on the photo instead
+            if not values:
+                raise ValueError(f"{photo.name}: {job.tool_name} returned no colors")
             data[photo.name] = [validate_hex_value(v) for v in values]
             # save per photo so an interrupt doesn't throw away calls already paid for
             save_data(data, job.json_data)
