@@ -2,25 +2,30 @@ from typing import Optional
 
 from closetllm.color import (
     default_cutoff,
-    matches_by_color
+    matches_for_color_palette
 )
 from closetllm.config import pinterest_hex_colors, closet_hex_colors
 from closetllm.extract import load_data
 
+def compute_matches(threshold: float = default_cutoff) -> dict:
+    color_palettes = load_data(pinterest_hex_colors)
+    garments = load_data(closet_hex_colors)
+
+    if not color_palettes:
+        raise FileNotFoundError("no color palettes saved yet")
+    if not garments:
+        raise FileNotFoundError("no clothes saved yet")
+    return {
+        name: matches_for_color_palette(color_palettes, garments, threshold)
+        for name, color_palettes in sorted(color_palettes.items())
+    }
+
 def run_matches(threshold: float = default_cutoff, limit: Optional[int] = None) -> dict:
     # for every palette color in each palette pair, match hex colors based on threshold
-    palettes = load_data(pinterest_hex_colors)
-    closet = load_data(closet_hex_colors)
+    results = compute_matches(threshold)
 
-    if not palettes:
-        raise FileNotFoundError(f"no color palettes saved yet")
-    if not closet:
-        raise FileNotFoundError(f"no clothes saved yet")
-
-    results = {}
-
-    for palette_name, palette_colors in sorted(palettes.items()):
-        by_color = matches_by_color(palette_colors, closet, threshold)
+    for palette_name, palette_colors in sorted(results.items()):
+        by_color = matches_for_color_palette(palette_colors, closet, threshold)
         results[palette_name] = by_color
 
         found = sum(len(hits) for hits in by_color.values())

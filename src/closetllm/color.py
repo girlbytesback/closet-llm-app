@@ -15,6 +15,9 @@ regex_hex = re.compile(r"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 # Dividing by it is what makes a white shirt read as white both indoors and out.
 _WHITE = (0.95047, 1.00000, 1.08883)
 
+# after sampling data for green garments, 15.0 produced best results for single
+# colors, subject to change!!!
+default_cutoff = 15.0
 
 def validate_hex_value(value: str) -> str:
     if not isinstance(value, str):
@@ -110,14 +113,6 @@ def delta_e_76(lab1: Sequence[float], lab2: Sequence[float]) -> float:
 def delta_e_2000(lab1: Sequence[float], lab2: Sequence[float]) -> float:
     """CIEDE2000. Same idea as above, plus correction terms.
 
-    Lab still isn't perfectly even, so this scales the lightness, chroma and
-    hue differences depending on where in the space you are. Every one of those
-    corrections was fitted to survey data — people were shown color pairs and
-    asked which looked more different. That's why the formula is ugly: it's
-    curve-fitting to human judgement, not elegant theory.
-
-    Validated against 23 published reference pairs.
-
     Reading the number:
         under 1   indistinguishable
         1 to 2    visible on close inspection
@@ -185,44 +180,37 @@ def delta_e_2000(lab1: Sequence[float], lab2: Sequence[float]) -> float:
     )
 
 def distance(hex1: str, hex2: str) -> float:
-    """Two hex codes in, one number out. Lower means more alike."""
+    """2 hex codes in, 1 number out -> lower = more alike."""
     return delta_e_2000(hex_to_lab(hex1), hex_to_lab(hex2))
 
-default_cutoff = 25.0
-
 def score_garment(palette_color: str, garment_colors: Sequence[str]) -> float:
-    """How close a garment gets to one palette color.
-
-    Today every garment has a single color, so this is just one distance. The
-    min() is there for later: when a garment has several colors, "does any part
-    of this pick up the palette color" is the right question, and this line
-    already answers it with no change.
-    """
-    return min(distance(palette_color, g) for g in garment_colors)
+    #distance formula + calculations to convert HEX -> LAB
+    return {distance(palette_color, garment) for garment in garment_colors}
 
 def matches_for_color(
+    #palette_color is singular as its iterating at one color at a time
     palette_color: str,
-    closet: Dict[str, Sequence[str]],
+    garments: Dict[str, Sequence[str]],
     cutoff: float = default_cutoff,
 ) -> List[Tuple[str, float]]:
-    """Every garment close enough to one palette color, nearest first."""
-    hits = [
-        (name, score_garment(palette_color, colors))
-        for name, colors in closet.items()
-    ]
-    return sorted((h for h in hits if h[1] <= cutoff), key=lambda pair: pair[1])
 
-def matches_by_color(
+    similar_colors = [
+        (name, score_garment(palette_color, garment_color))
+        for name, garment_color in garments.items()
+    ]
+    return sorted((h for h in similar_colors if h[1] <= cutoff), key=lambda pair: pair[1])
+
+def matches_for_color_palette(
     palette_colors: Sequence[str],
-    closet: Dict[str, Sequence[str]],
+    garment: Dict[str, Sequence[str]],
     cutoff: float = default_cutoff,
 ) -> Dict[str, List[Tuple[str, float]]]:
     """One list of garments per palette color — the shape the UI wants.
 
-    {"#B5C29A": [("green_top.jpeg", 12.4)],
-     "#E4A8C0": [("pink_shirt.jpeg", 8.1), ("rose_dress.jpeg", 19.0)]}
+    {"#B5C29A": [("IMG1.jpeg", 12.4)],
+     "#E4A8C0": [("IMG2.jpeg", 8.1), ("IMG3.jpeg", 19.0)]}
     """
-    return {c: matches_for_color(c, closet, cutoff) for c in palette_colors}
+    return {color: matches_for_color(color, garment, cutoff) for color in palette_colors}
 
 neutral_chroma = 12.0  # below this a color reads as a neutral
 

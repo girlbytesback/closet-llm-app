@@ -6,13 +6,13 @@ from anthropic import Anthropic
 from closetllm.images import image_block
 from closetllm.color import validate_hex_value
 from closetllm.config import (
-    closet_clothing_model,
-    pinterest_board_model,
-    closet_clothing_folder,
-    pinterest_board_folder,
+    garment_clothing_model,
+    color_palettes_model,
+    garment_folder,
+    color_palettes_folder,
     img_types,
-    pinterest_hex_colors,
-    closet_hex_colors,
+    palette_hex_colors,
+    garment_hex_colors,
 )
 
 _client = None
@@ -44,7 +44,7 @@ class ExtractPhotoDetails:
         return self.tool["name"]
 
 palette_job = ExtractPhotoDetails(
-    model=pinterest_board_model,
+    model=color_palettes_model,
     prompt="Return the two main colors in this photo as HEX codes",
     tool={
         "name": "extract_colors",
@@ -61,15 +61,15 @@ palette_job = ExtractPhotoDetails(
             "required": ["colors"],
         },
     },
-    json_data=pinterest_hex_colors,
+    json_data=palette_hex_colors,
     colors_key="colors",
 )
 
-clothing_job = ExtractPhotoDetails(
-    model=closet_clothing_model,
+garment_job = ExtractPhotoDetails(
+    model=garment_clothing_model,
     prompt=(
         "Return the single most dominant color of the clothing item in this photo as a HEX code. "
-        "Ignore the background, skin, hair, and any surroundings."
+        "Ignore the background, the floor, the hanger, and other objects in photo that are not the clothing item"
     ),
     tool={
         "name": "extract_clothing_colors",
@@ -90,7 +90,7 @@ clothing_job = ExtractPhotoDetails(
             "required": ["item", "color"],
         },
     },
-    json_data=closet_hex_colors,
+    json_data=garment_hex_colors,
     colors_key="color",
 )
 
@@ -156,8 +156,8 @@ def run(folder: Path, job: ExtractPhotoDetails) -> dict:
 
     return data
 
-def run_color_palettes(folder: Path = pinterest_board_folder) -> dict:
+def run_color_palettes(folder: Path = color_palettes_folder) -> dict:
     return run(folder, palette_job)
 
-def run_closet_colors(folder: Path = closet_clothing_folder) -> dict:
-    return run(folder, clothing_job)
+def run_closet_colors(folder: Path = garment_folder) -> dict:
+    return run(folder, garment_job)
