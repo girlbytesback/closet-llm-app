@@ -184,8 +184,10 @@ def distance(hex1: str, hex2: str) -> float:
     return delta_e_2000(hex_to_lab(hex1), hex_to_lab(hex2))
 
 def score_garment(palette_color: str, garment_colors: Sequence[str]) -> float:
-    #distance formula + calculations to convert HEX -> LAB
-    return {distance(palette_color, garment) for garment in garment_colors}
+    #distance formula + calculations to convert HEX -> LAB.
+    # a garment can carry several hex codes (shadow, highlight) — it scores on
+    # its closest one, so one number comes back out, not one per code
+    return min(distance(palette_color, garment) for garment in garment_colors)
 
 def matches_for_color(
     #palette_color is singular as its iterating at one color at a time

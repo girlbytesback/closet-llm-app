@@ -3,7 +3,8 @@
 import argparse
 from pathlib import Path
 
-from closetllm.config import closet_clothing_folder, pinterest_board_folder
+from closetllm.color import default_cutoff
+from closetllm.config import color_palettes_folder, garment_folder
 from closetllm.extract import run_closet_colors, run_color_palettes
 from closetllm.match import run_matches
 
@@ -27,15 +28,15 @@ def main() -> None:
     commands = parser.add_subparsers(dest="command", required=True)
 
     clothes = commands.add_parser("clothes", help="extract colors from clothing photos")
-    clothes.add_argument("folder", nargs="?", type=Path, default=closet_clothing_folder)
+    clothes.add_argument("folder", nargs="?", type=Path, default=garment_folder)
     clothes.set_defaults(run=clothes_cmd)
 
     palettes = commands.add_parser("palettes", help="extract colors from palette photos")
-    palettes.add_argument("folder", nargs="?", type=Path, default=pinterest_board_folder)
+    palettes.add_argument("folder", nargs="?", type=Path, default=color_palettes_folder)
     palettes.set_defaults(run=palettes_cmd)
 
     matches = commands.add_parser("match", help="match closet garments to palette colors")
-    matches.add_argument("--cutoff", type=float, default=25.0, help="max distance to count as a match")
+    matches.add_argument("--cutoff", type=float, default=default_cutoff, help="max distance to count as a match")
     matches.add_argument("--limit", type=int, default=None, help="max garments shown per color")
     matches.set_defaults(run=match_cmd)
 
