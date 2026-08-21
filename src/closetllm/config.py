@@ -13,6 +13,14 @@ color_palettes_folder = project_root / "color-palettes"
 palette_hex_colors = project_root / "data/colors.json"
 garment_hex_colors = project_root / "data/clothes.json"
 
+# Derived from the two files above — pure arithmetic, free to rebuild. It exists
+# only because the browser can't run Python.
+palette_matches = project_root / "data/matches.json"
+
+# Where the browser will find the garment photos. Python owns this so the UI
+# never has to know how the images get served.
+garment_url_prefix = "/clothes"
+
 img_types = {".jpeg", ".jpg", ".png"}
 
 # Claude caps images at 5MB and downscales anything over 1568px on the long edge

@@ -3,10 +3,9 @@
 import argparse
 from pathlib import Path
 
-from closetllm.color import default_cutoff
-from closetllm.config import color_palettes_folder, garment_folder
+from closetllm.config import color_palettes_folder, garment_folder, palette_matches
 from closetllm.extract import run_closet_colors, run_color_palettes
-from closetllm.match import run_matches
+from closetllm.match import run_matches, default_cutoff
 
 
 # each command takes the parsed args and pulls out what it needs — `match`
@@ -20,7 +19,7 @@ def palettes_cmd(args) -> None:
 
 
 def match_cmd(args) -> None:
-    run_matches(args.cutoff, args.limit)
+    run_matches(args.cutoff, args.limit, args.out)
 
 
 def main() -> None:
@@ -38,6 +37,15 @@ def main() -> None:
     matches = commands.add_parser("match", help="match closet garments to palette colors")
     matches.add_argument("--cutoff", type=float, default=default_cutoff, help="max distance to count as a match")
     matches.add_argument("--limit", type=int, default=None, help="max garments shown per color")
+    # bare --out takes the default path, --out somewhere.json takes that one
+    matches.add_argument(
+        "--out",
+        type=Path,
+        nargs="?",
+        const=palette_matches,
+        default=None,
+        help=f"also write the matches as JSON (bare flag writes {palette_matches.name})",
+    )
     matches.set_defaults(run=match_cmd)
 
     args = parser.parse_args()

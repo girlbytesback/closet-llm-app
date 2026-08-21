@@ -1,0 +1,497 @@
+{
+  "garments": {
+    "IMG_2476 2.jpeg": {
+      "colors": [
+        "#C173AB"
+      ],
+      "src": "/clothes/IMG_2476%202.jpeg"
+    },
+    "IMG_2935.jpg": {
+      "colors": [
+        "#2F4B85"
+      ],
+      "src": "/clothes/IMG_2935.jpg"
+    },
+    "IMG_2937.jpg": {
+      "colors": [
+        "#221F1E"
+      ],
+      "src": "/clothes/IMG_2937.jpg"
+    },
+    "IMG_2938.jpg": {
+      "colors": [
+        "#6B4437"
+      ],
+      "src": "/clothes/IMG_2938.jpg"
+    },
+    "IMG_2940.jpg": {
+      "colors": [
+        "#A8C9A4"
+      ],
+      "src": "/clothes/IMG_2940.jpg"
+    },
+    "IMG_2942.jpg": {
+      "colors": [
+        "#C4C08A"
+      ],
+      "src": "/clothes/IMG_2942.jpg"
+    },
+    "IMG_2944.jpg": {
+      "colors": [
+        "#B08A87"
+      ],
+      "src": "/clothes/IMG_2944.jpg"
+    },
+    "IMG_2945.jpg": {
+      "colors": [
+        "#96A891"
+      ],
+      "src": "/clothes/IMG_2945.jpg"
+    },
+    "IMG_2948.jpg": {
+      "colors": [
+        "#5C5A2C"
+      ],
+      "src": "/clothes/IMG_2948.jpg"
+    },
+    "IMG_2949.jpg": {
+      "colors": [
+        "#7B8A50"
+      ],
+      "src": "/clothes/IMG_2949.jpg"
+    },
+    "IMG_2950.jpg": {
+      "colors": [
+        "#7E8B44"
+      ],
+      "src": "/clothes/IMG_2950.jpg"
+    },
+    "IMG_2952.jpg": {
+      "colors": [
+        "#D9DDB4"
+      ],
+      "src": "/clothes/IMG_2952.jpg"
+    },
+    "IMG_2953.jpg": {
+      "colors": [
+        "#B9C960"
+      ],
+      "src": "/clothes/IMG_2953.jpg"
+    },
+    "IMG_2954.jpg": {
+      "colors": [
+        "#BFD17A"
+      ],
+      "src": "/clothes/IMG_2954.jpg"
+    },
+    "IMG_2957.jpg": {
+      "colors": [
+        "#1F4A3D"
+      ],
+      "src": "/clothes/IMG_2957.jpg"
+    }
+  },
+  "meta": {
+    "cutoff": 15.0,
+    "garment_count": 15,
+    "palette_count": 19
+  },
+  "palettes": {
+    "color_palette_1.jpeg": {
+      "colors": [
+        "#7C7E3A",
+        "#8B99A3"
+      ],
+      "matches": {
+        "#7C7E3A": [
+          {
+            "garment": "IMG_2950.jpg",
+            "score": 5.18
+          },
+          {
+            "garment": "IMG_2949.jpg",
+            "score": 6.17
+          },
+          {
+            "garment": "IMG_2948.jpg",
+            "score": 13.73
+          }
+        ],
+        "#8B99A3": []
+      }
+    },
+    "color_palette_10.jpeg": {
+      "colors": [
+        "#C9A79C",
+        "#9CAA83"
+      ],
+      "matches": {
+        "#9CAA83": [
+          {
+            "garment": "IMG_2945.jpg",
+            "score": 5.27
+          },
+          {
+            "garment": "IMG_2940.jpg",
+            "score": 9.26
+          },
+          {
+            "garment": "IMG_2942.jpg",
+            "score": 9.89
+          },
+          {
+            "garment": "IMG_2949.jpg",
+            "score": 12.03
+          },
+          {
+            "garment": "IMG_2950.jpg",
+            "score": 13.17
+          },
+          {
+            "garment": "IMG_2954.jpg",
+            "score": 13.7
+          },
+          {
+            "garment": "IMG_2952.jpg",
+            "score": 14.13
+          },
+          {
+            "garment": "IMG_2953.jpg",
+            "score": 14.61
+          }
+        ],
+        "#C9A79C": [
+          {
+            "garment": "IMG_2944.jpg",
+            "score": 9.33
+          }
+        ]
+      }
+    },
+    "color_palette_11.jpeg": {
+      "colors": [
+        "#B5CDD1",
+        "#A85C37"
+      ],
+      "matches": {
+        "#A85C37": [],
+        "#B5CDD1": []
+      }
+    },
+    "color_palette_12.jpeg": {
+      "colors": [
+        "#8A9A3B",
+        "#4B4E4D"
+      ],
+      "matches": {
+        "#4B4E4D": [],
+        "#8A9A3B": [
+          {
+            "garment": "IMG_2950.jpg",
+            "score": 6.02
+          },
+          {
+            "garment": "IMG_2949.jpg",
+            "score": 8.23
+          },
+          {
+            "garment": "IMG_2953.jpg",
+            "score": 13.47
+          }
+        ]
+      }
+    },
+    "color_palette_13.jpeg": {
+      "colors": [
+        "#B03A5B",
+        "#C9A47E"
+      ],
+      "matches": {
+        "#B03A5B": [],
+        "#C9A47E": [
+          {
+            "garment": "IMG_2942.jpg",
+            "score": 14.55
+          }
+        ]
+      }
+    },
+    "color_palette_14.jpeg": {
+      "colors": [
+        "#4A3226",
+        "#A8C4D9"
+      ],
+      "matches": {
+        "#4A3226": [
+          {
+            "garment": "IMG_2938.jpg",
+            "score": 8.8
+          },
+          {
+            "garment": "IMG_2937.jpg",
+            "score": 13.35
+          }
+        ],
+        "#A8C4D9": []
+      }
+    },
+    "color_palette_15.jpeg": {
+      "colors": [
+        "#7FB8C4",
+        "#8B5E3C"
+      ],
+      "matches": {
+        "#7FB8C4": [],
+        "#8B5E3C": [
+          {
+            "garment": "IMG_2938.jpg",
+            "score": 12.14
+          }
+        ]
+      }
+    },
+    "color_palette_16.jpeg": {
+      "colors": [
+        "#9B4F7A",
+        "#B0342E"
+      ],
+      "matches": {
+        "#9B4F7A": [
+          {
+            "garment": "IMG_2476 2.jpeg",
+            "score": 14.68
+          }
+        ],
+        "#B0342E": []
+      }
+    },
+    "color_palette_17.jpeg": {
+      "colors": [
+        "#8B2E3C",
+        "#C3A9C9"
+      ],
+      "matches": {
+        "#8B2E3C": [
+          {
+            "garment": "IMG_2938.jpg",
+            "score": 13.42
+          }
+        ],
+        "#C3A9C9": []
+      }
+    },
+    "color_palette_18.jpeg": {
+      "colors": [
+        "#A3B12E",
+        "#C1541C"
+      ],
+      "matches": {
+        "#A3B12E": [
+          {
+            "garment": "IMG_2953.jpg",
+            "score": 7.36
+          },
+          {
+            "garment": "IMG_2954.jpg",
+            "score": 10.72
+          },
+          {
+            "garment": "IMG_2942.jpg",
+            "score": 13.2
+          },
+          {
+            "garment": "IMG_2950.jpg",
+            "score": 14.09
+          }
+        ],
+        "#C1541C": []
+      }
+    },
+    "color_palette_19.jpeg": {
+      "colors": [
+        "#4A6D9C",
+        "#6E1F2A"
+      ],
+      "matches": {
+        "#4A6D9C": [
+          {
+            "garment": "IMG_2935.jpg",
+            "score": 11.66
+          }
+        ],
+        "#6E1F2A": [
+          {
+            "garment": "IMG_2938.jpg",
+            "score": 13.11
+          }
+        ]
+      }
+    },
+    "color_palette_2.jpeg": {
+      "colors": [
+        "#C68A2E",
+        "#E8B8C4"
+      ],
+      "matches": {
+        "#C68A2E": [],
+        "#E8B8C4": []
+      }
+    },
+    "color_palette_3.jpeg": {
+      "colors": [
+        "#A8C24A",
+        "#7A1F2B"
+      ],
+      "matches": {
+        "#7A1F2B": [
+          {
+            "garment": "IMG_2938.jpg",
+            "score": 13.23
+          }
+        ],
+        "#A8C24A": [
+          {
+            "garment": "IMG_2953.jpg",
+            "score": 3.46
+          },
+          {
+            "garment": "IMG_2954.jpg",
+            "score": 6.5
+          },
+          {
+            "garment": "IMG_2942.jpg",
+            "score": 12.01
+          }
+        ]
+      }
+    },
+    "color_palette_4.jpeg": {
+      "colors": [
+        "#E8D896",
+        "#E3A9C0"
+      ],
+      "matches": {
+        "#E3A9C0": [],
+        "#E8D896": [
+          {
+            "garment": "IMG_2942.jpg",
+            "score": 7.61
+          },
+          {
+            "garment": "IMG_2952.jpg",
+            "score": 8.43
+          },
+          {
+            "garment": "IMG_2954.jpg",
+            "score": 10.3
+          },
+          {
+            "garment": "IMG_2953.jpg",
+            "score": 11.66
+          }
+        ]
+      }
+    },
+    "color_palette_5.jpeg": {
+      "colors": [
+        "#8FC1AE",
+        "#5C1A22"
+      ],
+      "matches": {
+        "#5C1A22": [
+          {
+            "garment": "IMG_2938.jpg",
+            "score": 13.66
+          }
+        ],
+        "#8FC1AE": [
+          {
+            "garment": "IMG_2940.jpg",
+            "score": 7.72
+          },
+          {
+            "garment": "IMG_2945.jpg",
+            "score": 10.14
+          }
+        ]
+      }
+    },
+    "color_palette_6.jpeg": {
+      "colors": [
+        "#C56D5E",
+        "#6E6A69"
+      ],
+      "matches": {
+        "#6E6A69": [],
+        "#C56D5E": [
+          {
+            "garment": "IMG_2944.jpg",
+            "score": 12.53
+          }
+        ]
+      }
+    },
+    "color_palette_7.jpeg": {
+      "colors": [
+        "#5B2333",
+        "#C0C0C0"
+      ],
+      "matches": {
+        "#5B2333": [
+          {
+            "garment": "IMG_2938.jpg",
+            "score": 14.9
+          }
+        ],
+        "#C0C0C0": []
+      }
+    },
+    "color_palette_8.jpeg": {
+      "colors": [
+        "#C58A9B",
+        "#2B2420"
+      ],
+      "matches": {
+        "#2B2420": [
+          {
+            "garment": "IMG_2937.jpg",
+            "score": 3.37
+          }
+        ],
+        "#C58A9B": [
+          {
+            "garment": "IMG_2944.jpg",
+            "score": 9.11
+          },
+          {
+            "garment": "IMG_2476 2.jpeg",
+            "score": 11.18
+          }
+        ]
+      }
+    },
+    "color_palette_9.jpeg": {
+      "colors": [
+        "#8A9A3B",
+        "#B03060"
+      ],
+      "matches": {
+        "#8A9A3B": [
+          {
+            "garment": "IMG_2950.jpg",
+            "score": 6.02
+          },
+          {
+            "garment": "IMG_2949.jpg",
+            "score": 8.23
+          },
+          {
+            "garment": "IMG_2953.jpg",
+            "score": 13.47
+          }
+        ],
+        "#B03060": []
+      }
+    }
+  }
+}

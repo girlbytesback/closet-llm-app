@@ -1,11 +1,24 @@
+"""Scoring the closet against the palettes, and the three things we do with it.
+
+compute_matches is the only part that thinks. filter/print/write are consumers
+that each take the scores and do one thing, so a web server can later import
+compute_matches without dragging the printing along with it.
+"""
+
+from pathlib import Path
 from typing import Optional
+from urllib.parse import quote
 
 from closetllm.color import (
     default_cutoff,
     matches_for_color_palette
 )
-from closetllm.config import palette_hex_colors, garment_hex_colors
-from closetllm.extract import load_data
+from closetllm.config import (
+    palette_hex_colors,
+    garment_hex_colors,
+    garment_url_prefix,
+)
+from closetllm.extract import load_data, save_data
 
 def compute_matches(threshold: float = default_cutoff) -> dict:
     color_palettes = load_data(palette_hex_colors)
@@ -20,10 +33,57 @@ def compute_matches(threshold: float = default_cutoff) -> dict:
         for name, palette_colors in sorted(color_palettes.items())
     }
 
-def run_matches(threshold: float = default_cutoff, limit: Optional[int] = None) -> dict:
-    # for every palette color in each palette pair, match hex colors based on threshold
-    results = compute_matches(threshold)
+def build_export(results: dict, cutoff: float) -> dict:
+    """Shape the scores into the document the web UI reads.
 
+    Everything here is already under the cutoff, so the UI can render each list
+    as-is — no filtering on the JavaScript side.
+
+    Garments are listed once under "garments" and referenced by filename from
+    each match, so a garment that hits ten palettes carries its hex codes and
+    image URL once instead of ten times. Every garment is listed, matched or
+    not, so the UI can also show the closet as a whole.
+
+    meta is the staleness check: if it says 15 garments and the closet holds 20,
+    this file predates the last `closetllm clothes` run.
+    """
+    garments = load_data(garment_hex_colors)
+    return {
+        "meta": {
+            "cutoff": cutoff,
+            "garment_count": len(garments),
+            "palette_count": len(results),
+        },
+        "garments": {
+            name: {
+                "colors": colors,
+                # quoted because filenames like "IMG_2476 2.jpeg" carry spaces
+                "src": f"{garment_url_prefix}/{quote(name)}",
+            }
+            for name, colors in sorted(garments.items())
+        },
+        "palettes": {
+            name: {
+                # the inner keys already are the palette's colors, in order
+                "colors": list(by_color),
+                "matches": {
+                    color: [
+                        # full float precision is noise on a number whose useful
+                        # range is 0-30, and it triples the file size
+                        {"garment": garment, "score": round(score, 2)}
+                        for garment, score in hits
+                    ]
+                    for color, hits in by_color.items()
+                },
+            }
+            for name, by_color in sorted(results.items())
+        },
+    }
+
+def write_matches(results: dict, path: Path, cutoff: float) -> None:
+    save_data(build_export(results, cutoff), path)
+
+def print_matches(results: dict, threshold: float, limit: Optional[int] = None) -> None:
     # compute_matches already returns {palette: {palette_color: [(garment, score)]}},
     # so printing is a walk over that — no second pass over the garments
     for palette_name, by_color in sorted(results.items()):
@@ -42,5 +102,20 @@ def run_matches(threshold: float = default_cutoff, limit: Optional[int] = None) 
                 continue
             for name, score in hits[:limit]:
                 print(f"  {palette_color}  {score:5.1f}  {name}  ")
+
+def run_matches(
+    threshold: float = default_cutoff,
+    limit: Optional[int] = None,
+    out: Optional[Path] = None,
+) -> dict:
+    # the printout and the exported file are the same set of matches, both cut
+    # at the same threshold — what you read in the terminal is what the UI gets
+    results = compute_matches(threshold)
+
+    print_matches(results, threshold, limit)
+
+    if out is not None:
+        write_matches(results, out, threshold)
+        print(f"\nwrote {out}")
 
     return results
