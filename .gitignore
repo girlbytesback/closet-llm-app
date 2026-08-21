@@ -14,6 +14,13 @@ wheels/
 # Virtual environments
 .venv
 
+# Node
+node_modules/
+
+# Vite dep-optimizer cache. The deps_temp_* dirs carry a fresh hash each run,
+# so ignore the whole cache rather than individual paths.
+web/.vite/
+
 # Tool caches
 .ruff_cache/
 .mypy_cache/
