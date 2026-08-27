@@ -17,6 +17,7 @@ from closetllm.config import (
     palette_hex_colors,
     garment_hex_colors,
     garment_url_prefix,
+    palette_url_prefix,
 )
 from closetllm.extract import load_data, save_data
 
@@ -33,20 +34,8 @@ def compute_matches(threshold: float = default_cutoff) -> dict:
         for name, palette_colors in sorted(color_palettes.items())
     }
 
-def build_export(results: dict, cutoff: float) -> dict:
-    """Shape the scores into the document the web UI reads.
-
-    Everything here is already under the cutoff, so the UI can render each list
-    as-is — no filtering on the JavaScript side.
-
-    Garments are listed once under "garments" and referenced by filename from
-    each match, so a garment that hits ten palettes carries its hex codes and
-    image URL once instead of ten times. Every garment is listed, matched or
-    not, so the UI can also show the closet as a whole.
-
-    meta is the staleness check: if it says 15 garments and the closet holds 20,
-    this file predates the last `closetllm clothes` run.
-    """
+def build_matches(results: dict, cutoff: float) -> dict:
+    #shape the scores into the document the web UI reads.
     garments = load_data(garment_hex_colors)
     return {
         "meta": {
@@ -66,6 +55,7 @@ def build_export(results: dict, cutoff: float) -> dict:
             name: {
                 # the inner keys already are the palette's colors, in order
                 "colors": list(by_color),
+                "src": f"{palette_url_prefix}/{quote(name)}",
                 "matches": {
                     color: [
                         # full float precision is noise on a number whose useful
@@ -81,7 +71,7 @@ def build_export(results: dict, cutoff: float) -> dict:
     }
 
 def write_matches(results: dict, path: Path, cutoff: float) -> None:
-    save_data(build_export(results, cutoff), path)
+    save_data(build_matches(results, cutoff), path)
 
 def print_matches(results: dict, threshold: float, limit: Optional[int] = None) -> None:
     # compute_matches already returns {palette: {palette_color: [(garment, score)]}},

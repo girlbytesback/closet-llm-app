@@ -1,6 +1,6 @@
-# closetLLM web (Pick your palette)
+# closetLLM ui (Pick your palette)
 
-The Python side of closetLLM still runs the same as always. This `src/web/`
+The Python side of closetLLM still runs the same as always. This `src/ui/`
 folder is a separate little React app that shows the palette-picker screen in a browser.
 It has the 19 palettes built in, so it runs on its own.
 
@@ -14,12 +14,12 @@ Check it's there:
 Then, from the project root, move into this folder and install the app's tools
 once:
 
-    cd src/web
+    cd src/ui
     npm install
 
 ## Run it
 
-From `src/web` (not the project root):
+From `src/ui` (not the project root):
 
     npm run dev
 
