@@ -46,7 +46,7 @@ def build_matches(results: dict, cutoff: float) -> dict:
         "garments": {
             name: {
                 "colors": colors,
-                # quoted because filenames like "IMG_2476 2.jpeg" carry spaces
+                # quoted so any spaces or odd characters in a filename survive the URL
                 "src": f"{garment_url_prefix}/{quote(name)}",
             }
             for name, colors in sorted(garments.items())
