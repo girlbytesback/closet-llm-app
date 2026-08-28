@@ -1,18 +1,11 @@
-"""
-Nothing here talks to the API. extract.py turns photos into hex codes once and
-caches them; from that point on, matching is arithmetic that gives the same
-answer every time it runs.
-"""
-
 from __future__ import annotations
 from math import atan2, cos, degrees, exp, hypot, radians, sin, sqrt
 from typing import Dict, List, Sequence, Tuple
 import re
 
+
 regex_hex = re.compile(r"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 
-# D65 white point — the color of the light everything is measured against.
-# Dividing by it is what makes a white shirt read as white both indoors and out.
 _WHITE = (0.95047, 1.00000, 1.08883)
 
 # after sampling data for green garments, 15.0 produced best results for single
@@ -36,12 +29,8 @@ def validate_hex_value(value: str) -> str:
 
 
 def hex_to_rgb(value: str) -> Tuple[float, float, float]:
-    """Stage 1-2. '#C071A8' -> (0.7529, 0.4431, 0.6588).
-
-    Base-16 arithmetic: C0 = 12*16 + 0 = 192, then divide by 255 because
-    everything downstream expects fractions rather than 0-255.
-
-    calculations + numbers derived from online
+    """
+    calculations + numbers derived online
     """
     digits = validate_hex_value(value).lstrip("#")
     return tuple(int(digits[i:i + 2], 16) / 255 for i in (0, 2, 4))
@@ -74,8 +63,7 @@ def xyz_to_lab(xyz: Sequence[float]) -> Tuple[float, float, float]:
     cube root models how perception compresses — doubling the
     light doesn't double the brightness you experience. The subtractions model
     how your brain actually receives color: not as red/green/blue, but as three
-    comparisons. That's why "reddish green" isn't imaginable — one channel
-    can't be at both ends.
+    comparisons.
 
         l = lightness, 0 to 100
         a = green (negative) to red (positive)
@@ -103,14 +91,14 @@ def lab_to_lch(lab: Sequence[float]) -> Tuple[float, float, float]:
     return (lightness, hypot(a, b), degrees(atan2(b, a)) % 360)
 
 
-def delta_e_76(lab1: Sequence[float], lab2: Sequence[float]) -> float:
-    """pythagorean theorem for distancce formula 
+def raw_distance(lab1: Sequence[float], lab2: Sequence[float]) -> float:
+    """CIE76. pythagorean theorem for distancce formula
     sqrt((L1-L2)^2 + (a1-a2)^2 + (b1-b2)^2)
     """
     return sqrt(sum((x - y) ** 2 for x, y in zip(lab1, lab2)))
 
 
-def delta_e_2000(lab1: Sequence[float], lab2: Sequence[float]) -> float:
+def color_distance(lab1: Sequence[float], lab2: Sequence[float]) -> float:
     """CIEDE2000. Same idea as above, plus correction terms.
 
     Reading the number:
@@ -181,7 +169,7 @@ def delta_e_2000(lab1: Sequence[float], lab2: Sequence[float]) -> float:
 
 def distance(hex1: str, hex2: str) -> float:
     """2 hex codes in, 1 number out -> lower = more alike."""
-    return delta_e_2000(hex_to_lab(hex1), hex_to_lab(hex2))
+    return color_distance(hex_to_lab(hex1), hex_to_lab(hex2))
 
 def score_garment(palette_color: str, garment_colors: Sequence[str]) -> float:
     #distance formula + calculations to convert HEX -> LAB.
@@ -189,6 +177,7 @@ def score_garment(palette_color: str, garment_colors: Sequence[str]) -> float:
     # its closest one, so one number comes back out, not one per code
     return min(distance(palette_color, garment) for garment in garment_colors)
 
+# garment evaluated for both colors in palette
 def matches_for_color(
     #palette_color is singular as its iterating at one color at a time
     palette_color: str,
@@ -202,6 +191,7 @@ def matches_for_color(
     ]
     return sorted((h for h in similar_colors if h[1] <= cutoff), key=lambda pair: pair[1])
 
+#sends a color palette to be evaluated
 def matches_for_color_palette(
     palette_colors: Sequence[str],
     garment: Dict[str, Sequence[str]],
@@ -212,7 +202,15 @@ def matches_for_color_palette(
     {"#B5C29A": [("IMG1.jpeg", 12.4)],
      "#E4A8C0": [("IMG2.jpeg", 8.1), ("IMG3.jpeg", 19.0)]}
     """
-    return {color: matches_for_color(color, garment, cutoff) for color in palette_colors}
+    results = {}
+
+    for color in palette_colors:
+        if is_neutral(color):
+            results[color] = []      # keep the swatch, but no matches
+        else:
+            results[color] = matches_for_color(color, garment, cutoff)
+            
+    return results
 
 neutral_chroma = 12.0  # below this a color reads as a neutral
 

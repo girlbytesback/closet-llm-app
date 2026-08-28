@@ -95,6 +95,7 @@ garment_job = ExtractPhotoDetails(
 )
 
 # one model call for one photo; returns whatever the tool's schema promised
+# normalization occurs here, turns results to hex
 def extract_colors(path: Path, job: ExtractPhotoDetails) -> dict:
     response = client().messages.create(
         model=job.model,
