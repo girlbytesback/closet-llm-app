@@ -6,7 +6,7 @@ from closetllm.extract import load_data
 from closetllm.config import garment_hex_colors
 
 
-from answer_key import answer_key
+from evals.answer_key import answer_key
 #to be tweaked
 THRESHOLD = 5.0
 
