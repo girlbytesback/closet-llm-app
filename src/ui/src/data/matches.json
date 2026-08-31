@@ -6,81 +6,33 @@
       ],
       "src": "/clothes/GARMENT_1.jpeg"
     },
-    "GARMENT_2.jpg": {
+    "GARMENT_1.jpg": {
       "colors": [
-        "#2F4B85"
+        "#C275AC"
       ],
-      "src": "/clothes/GARMENT_2.jpg"
-    },
-    "GARMENT_3.jpg": {
-      "colors": [
-        "#221F1E"
-      ],
-      "src": "/clothes/GARMENT_3.jpg"
-    },
-    "GARMENT_4.jpg": {
-      "colors": [
-        "#6B4437"
-      ],
-      "src": "/clothes/GARMENT_4.jpg"
-    },
-    "GARMENT_5.jpg": {
-      "colors": [
-        "#A8C9A4"
-      ],
-      "src": "/clothes/GARMENT_5.jpg"
-    },
-    "GARMENT_6.jpg": {
-      "colors": [
-        "#C4C08A"
-      ],
-      "src": "/clothes/GARMENT_6.jpg"
-    },
-    "GARMENT_7.jpg": {
-      "colors": [
-        "#B08A87"
-      ],
-      "src": "/clothes/GARMENT_7.jpg"
-    },
-    "GARMENT_8.jpg": {
-      "colors": [
-        "#96A891"
-      ],
-      "src": "/clothes/GARMENT_8.jpg"
-    },
-    "GARMENT_9.jpg": {
-      "colors": [
-        "#5C5A2C"
-      ],
-      "src": "/clothes/GARMENT_9.jpg"
+      "src": "/clothes/GARMENT_1.jpg"
     },
     "GARMENT_10.jpg": {
       "colors": [
-        "#7B8A50"
+        "#7C8A52"
       ],
       "src": "/clothes/GARMENT_10.jpg"
     },
-    "GARMENT_11.jpg": {
-      "colors": [
-        "#7E8B44"
-      ],
-      "src": "/clothes/GARMENT_11.jpg"
-    },
     "GARMENT_12.jpg": {
       "colors": [
-        "#D9DDB4"
+        "#DCE0B4"
       ],
       "src": "/clothes/GARMENT_12.jpg"
     },
     "GARMENT_13.jpg": {
       "colors": [
-        "#B9C960"
+        "#B7C464"
       ],
       "src": "/clothes/GARMENT_13.jpg"
     },
     "GARMENT_14.jpg": {
       "colors": [
-        "#BFD17A"
+        "#B9D183"
       ],
       "src": "/clothes/GARMENT_14.jpg"
     },
@@ -92,49 +44,55 @@
     },
     "GARMENT_16.jpg": {
       "colors": [
-        "#C13B2A"
+        "#C0402C"
       ],
       "src": "/clothes/GARMENT_16.jpg"
     },
     "GARMENT_17.jpg": {
       "colors": [
-        "#E15A3E"
+        "#E15A3C"
       ],
       "src": "/clothes/GARMENT_17.jpg"
     },
     "GARMENT_18.jpg": {
       "colors": [
-        "#E9524B"
+        "#E8544B"
       ],
       "src": "/clothes/GARMENT_18.jpg"
     },
     "GARMENT_19.jpg": {
       "colors": [
-        "#D42638"
+        "#D62231"
       ],
       "src": "/clothes/GARMENT_19.jpg"
     },
+    "GARMENT_2.jpg": {
+      "colors": [
+        "#334F84"
+      ],
+      "src": "/clothes/GARMENT_2.jpg"
+    },
     "GARMENT_20.jpg": {
       "colors": [
-        "#9E1F38"
+        "#8E1D33"
       ],
       "src": "/clothes/GARMENT_20.jpg"
     },
     "GARMENT_21.jpg": {
       "colors": [
-        "#B94A4F"
+        "#B94550"
       ],
       "src": "/clothes/GARMENT_21.jpg"
     },
     "GARMENT_22.jpg": {
       "colors": [
-        "#D3C8A4"
+        "#D6CBA4"
       ],
       "src": "/clothes/GARMENT_22.jpg"
     },
     "GARMENT_23.jpg": {
       "colors": [
-        "#F2E9C9"
+        "#F2E9C8"
       ],
       "src": "/clothes/GARMENT_23.jpg"
     },
@@ -146,127 +104,311 @@
     },
     "GARMENT_25.jpg": {
       "colors": [
-        "#7C1F38"
+        "#7B1F35"
       ],
       "src": "/clothes/GARMENT_25.jpg"
     },
     "GARMENT_26.jpg": {
       "colors": [
-        "#A9578A"
+        "#A85C7E"
       ],
       "src": "/clothes/GARMENT_26.jpg"
     },
     "GARMENT_27.jpg": {
       "colors": [
-        "#E3C4D2"
+        "#E5C3D1"
       ],
       "src": "/clothes/GARMENT_27.jpg"
     },
     "GARMENT_28.jpg": {
       "colors": [
-        "#D02A55"
+        "#CE2751"
       ],
       "src": "/clothes/GARMENT_28.jpg"
     },
     "GARMENT_29.jpg": {
       "colors": [
-        "#EE8CC0"
+        "#EE8FC0"
       ],
       "src": "/clothes/GARMENT_29.jpg"
     },
+    "GARMENT_3.jpg": {
+      "colors": [
+        "#2A2724"
+      ],
+      "src": "/clothes/GARMENT_3.jpg"
+    },
     "GARMENT_30.jpg": {
       "colors": [
-        "#BF5F79"
+        "#C25E7E"
       ],
       "src": "/clothes/GARMENT_30.jpg"
+    },
+    "GARMENT_31.jpg": {
+      "colors": [
+        "#1E1E22"
+      ],
+      "src": "/clothes/GARMENT_31.jpg"
+    },
+    "GARMENT_32.jpg": {
+      "colors": [
+        "#2B3040"
+      ],
+      "src": "/clothes/GARMENT_32.jpg"
+    },
+    "GARMENT_33.jpg": {
+      "colors": [
+        "#2A32A8"
+      ],
+      "src": "/clothes/GARMENT_33.jpg"
+    },
+    "GARMENT_34.jpg": {
+      "colors": [
+        "#B4C6D4"
+      ],
+      "src": "/clothes/GARMENT_34.jpg"
+    },
+    "GARMENT_35.jpg": {
+      "colors": [
+        "#A3A69B"
+      ],
+      "src": "/clothes/GARMENT_35.jpg"
+    },
+    "GARMENT_36.jpg": {
+      "colors": [
+        "#93A3A3"
+      ],
+      "src": "/clothes/GARMENT_36.jpg"
+    },
+    "GARMENT_37.jpg": {
+      "colors": [
+        "#2B3038"
+      ],
+      "src": "/clothes/GARMENT_37.jpg"
+    },
+    "GARMENT_38.jpg": {
+      "colors": [
+        "#2A2E3A"
+      ],
+      "src": "/clothes/GARMENT_38.jpg"
+    },
+    "GARMENT_39.jpg": {
+      "colors": [
+        "#87B7C6"
+      ],
+      "src": "/clothes/GARMENT_39.jpg"
+    },
+    "GARMENT_4.jpg": {
+      "colors": [
+        "#6B4238"
+      ],
+      "src": "/clothes/GARMENT_4.jpg"
+    },
+    "GARMENT_40.jpg": {
+      "colors": [
+        "#8296B4"
+      ],
+      "src": "/clothes/GARMENT_40.jpg"
+    },
+    "GARMENT_41.jpg": {
+      "colors": [
+        "#8FA7AE"
+      ],
+      "src": "/clothes/GARMENT_41.jpg"
+    },
+    "GARMENT_42.jpg": {
+      "colors": [
+        "#B6AC8C"
+      ],
+      "src": "/clothes/GARMENT_42.jpg"
+    },
+    "GARMENT_43.jpg": {
+      "colors": [
+        "#E79CC8"
+      ],
+      "src": "/clothes/GARMENT_43.jpg"
+    },
+    "GARMENT_44.jpg": {
+      "colors": [
+        "#D8AEBE"
+      ],
+      "src": "/clothes/GARMENT_44.jpg"
+    },
+    "GARMENT_45.jpg": {
+      "colors": [
+        "#F2F1EF"
+      ],
+      "src": "/clothes/GARMENT_45.jpg"
+    },
+    "GARMENT_46.jpg": {
+      "colors": [
+        "#F5F0E8"
+      ],
+      "src": "/clothes/GARMENT_46.jpg"
+    },
+    "GARMENT_47.jpg": {
+      "colors": [
+        "#101010"
+      ],
+      "src": "/clothes/GARMENT_47.jpg"
+    },
+    "GARMENT_48.jpg": {
+      "colors": [
+        "#F2EADA"
+      ],
+      "src": "/clothes/GARMENT_48.jpg"
+    },
+    "GARMENT_49.jpg": {
+      "colors": [
+        "#B9D6E8"
+      ],
+      "src": "/clothes/GARMENT_49.jpg"
+    },
+    "GARMENT_5.jpg": {
+      "colors": [
+        "#A8CBA4"
+      ],
+      "src": "/clothes/GARMENT_5.jpg"
+    },
+    "GARMENT_50.jpg": {
+      "colors": [
+        "#AFC4D6"
+      ],
+      "src": "/clothes/GARMENT_50.jpg"
+    },
+    "GARMENT_51.jpg": {
+      "colors": [
+        "#7C8265"
+      ],
+      "src": "/clothes/GARMENT_51.jpg"
+    },
+    "GARMENT_52.jpg": {
+      "colors": [
+        "#15161A"
+      ],
+      "src": "/clothes/GARMENT_52.jpg"
+    },
+    "GARMENT_53.jpg": {
+      "colors": [
+        "#455B5D"
+      ],
+      "src": "/clothes/GARMENT_53.jpg"
+    },
+    "GARMENT_54.jpg": {
+      "colors": [
+        "#F7E4DA"
+      ],
+      "src": "/clothes/GARMENT_54.jpg"
+    },
+    "GARMENT_55.jpg": {
+      "colors": [
+        "#332E2E"
+      ],
+      "src": "/clothes/GARMENT_55.jpg"
+    },
+    "GARMENT_8.jpg": {
+      "colors": [
+        "#94A891"
+      ],
+      "src": "/clothes/GARMENT_8.jpg"
+    },
+    "GARMENT_9.jpg": {
+      "colors": [
+        "#5C5A2C"
+      ],
+      "src": "/clothes/GARMENT_9.jpg"
     }
   },
   "meta": {
     "cutoff": 15.0,
-    "garment_count": 30,
+    "garment_count": 53,
     "palette_count": 19
   },
   "palettes": {
     "color_palette_1.jpeg": {
       "colors": [
-        "#7C7E3A",
-        "#8B99A3"
+        "#7C7C3E",
+        "#8A9BA8"
       ],
       "matches": {
-        "#7C7E3A": [
-          {
-            "garment": "GARMENT_11.jpg",
-            "score": 5.18
-          },
+        "#7C7C3E": [
           {
             "garment": "GARMENT_10.jpg",
-            "score": 6.17
+            "score": 6.54
+          },
+          {
+            "garment": "GARMENT_51.jpg",
+            "score": 9.37
           },
           {
             "garment": "GARMENT_9.jpg",
-            "score": 13.73
+            "score": 12.85
           }
         ],
-        "#8B99A3": []
+        "#8A9BA8": []
       },
       "src": "/color-palettes/color_palette_1.jpeg"
     },
     "color_palette_10.jpeg": {
       "colors": [
-        "#C9A79C",
-        "#9CAA83"
+        "#B7C29A",
+        "#E8B4A6"
       ],
       "matches": {
-        "#9CAA83": [
-          {
-            "garment": "GARMENT_8.jpg",
-            "score": 5.27
-          },
+        "#B7C29A": [
           {
             "garment": "GARMENT_5.jpg",
-            "score": 9.26
-          },
-          {
-            "garment": "GARMENT_6.jpg",
-            "score": 9.89
-          },
-          {
-            "garment": "GARMENT_10.jpg",
-            "score": 12.03
-          },
-          {
-            "garment": "GARMENT_24.jpg",
-            "score": 12.54
-          },
-          {
-            "garment": "GARMENT_11.jpg",
-            "score": 13.17
-          },
-          {
-            "garment": "GARMENT_22.jpg",
-            "score": 13.44
-          },
-          {
-            "garment": "GARMENT_14.jpg",
-            "score": 13.7
+            "score": 6.66
           },
           {
             "garment": "GARMENT_12.jpg",
-            "score": 14.13
+            "score": 7.97
+          },
+          {
+            "garment": "GARMENT_14.jpg",
+            "score": 8.66
+          },
+          {
+            "garment": "GARMENT_22.jpg",
+            "score": 8.81
+          },
+          {
+            "garment": "GARMENT_8.jpg",
+            "score": 9.6
+          },
+          {
+            "garment": "GARMENT_42.jpg",
+            "score": 9.81
           },
           {
             "garment": "GARMENT_13.jpg",
-            "score": 14.61
+            "score": 11.16
+          },
+          {
+            "garment": "GARMENT_24.jpg",
+            "score": 11.28
+          },
+          {
+            "garment": "GARMENT_35.jpg",
+            "score": 12.31
+          },
+          {
+            "garment": "GARMENT_23.jpg",
+            "score": 13.02
           }
         ],
-        "#C9A79C": [
+        "#E8B4A6": [
           {
-            "garment": "GARMENT_7.jpg",
-            "score": 9.33
+            "garment": "GARMENT_44.jpg",
+            "score": 12.06
           },
           {
             "garment": "GARMENT_27.jpg",
-            "score": 13.1
+            "score": 12.24
+          },
+          {
+            "garment": "GARMENT_54.jpg",
+            "score": 13.97
           }
         ]
       },
@@ -274,47 +416,39 @@
     },
     "color_palette_11.jpeg": {
       "colors": [
-        "#B5CDD1",
+        "#B0CCC9",
         "#A85C37"
       ],
       "matches": {
         "#A85C37": [
           {
             "garment": "GARMENT_16.jpg",
-            "score": 10.53
+            "score": 9.66
           },
           {
             "garment": "GARMENT_17.jpg",
-            "score": 12.56
-          },
-          {
-            "garment": "GARMENT_21.jpg",
-            "score": 14.55
+            "score": 12.4
           }
         ],
-        "#B5CDD1": []
+        "#B0CCC9": []
       },
       "src": "/color-palettes/color_palette_11.jpeg"
     },
     "color_palette_12.jpeg": {
       "colors": [
-        "#8A9A3B",
-        "#4B4E4D"
+        "#8A9A2A",
+        "#4A4A4A"
       ],
       "matches": {
-        "#4B4E4D": [],
-        "#8A9A3B": [
-          {
-            "garment": "GARMENT_11.jpg",
-            "score": 6.02
-          },
+        "#4A4A4A": [],
+        "#8A9A2A": [
           {
             "garment": "GARMENT_10.jpg",
-            "score": 8.23
+            "score": 10.19
           },
           {
             "garment": "GARMENT_13.jpg",
-            "score": 13.47
+            "score": 12.7
           }
         ]
       },
@@ -322,52 +456,52 @@
     },
     "color_palette_13.jpeg": {
       "colors": [
-        "#B03A5B",
-        "#C9A47E"
+        "#B5455D",
+        "#C9A27E"
       ],
       "matches": {
-        "#B03A5B": [
-          {
-            "garment": "GARMENT_28.jpg",
-            "score": 6.64
-          },
+        "#B5455D": [
           {
             "garment": "GARMENT_21.jpg",
-            "score": 8.66
+            "score": 4.72
           },
           {
-            "garment": "GARMENT_20.jpg",
-            "score": 8.82
+            "garment": "GARMENT_28.jpg",
+            "score": 5.68
           },
           {
             "garment": "GARMENT_30.jpg",
-            "score": 10.22
+            "score": 8.9
           },
           {
             "garment": "GARMENT_26.jpg",
-            "score": 12.37
+            "score": 9.83
           },
           {
-            "garment": "GARMENT_25.jpg",
-            "score": 12.42
+            "garment": "GARMENT_20.jpg",
+            "score": 12.52
           },
           {
             "garment": "GARMENT_19.jpg",
-            "score": 13.04
+            "score": 12.9
+          },
+          {
+            "garment": "GARMENT_25.jpg",
+            "score": 14.87
           }
         ],
-        "#C9A47E": [
+        "#C9A27E": [
           {
             "garment": "GARMENT_24.jpg",
-            "score": 8.02
+            "score": 9.18
+          },
+          {
+            "garment": "GARMENT_42.jpg",
+            "score": 11.13
           },
           {
             "garment": "GARMENT_22.jpg",
-            "score": 12.82
-          },
-          {
-            "garment": "GARMENT_6.jpg",
-            "score": 14.55
+            "score": 14.41
           }
         ]
       },
@@ -375,35 +509,80 @@
     },
     "color_palette_14.jpeg": {
       "colors": [
-        "#4A3226",
-        "#A8C4D9"
+        "#3B2A24",
+        "#A9C2D6"
       ],
       "matches": {
-        "#4A3226": [
+        "#3B2A24": [],
+        "#A9C2D6": [
           {
-            "garment": "GARMENT_4.jpg",
-            "score": 8.8
+            "garment": "GARMENT_50.jpg",
+            "score": 1.37
           },
           {
-            "garment": "GARMENT_3.jpg",
-            "score": 13.35
+            "garment": "GARMENT_34.jpg",
+            "score": 2.86
+          },
+          {
+            "garment": "GARMENT_49.jpg",
+            "score": 5.09
+          },
+          {
+            "garment": "GARMENT_39.jpg",
+            "score": 8.46
+          },
+          {
+            "garment": "GARMENT_41.jpg",
+            "score": 9.6
+          },
+          {
+            "garment": "GARMENT_36.jpg",
+            "score": 12.2
+          },
+          {
+            "garment": "GARMENT_40.jpg",
+            "score": 13.36
           }
-        ],
-        "#A8C4D9": []
+        ]
       },
       "src": "/color-palettes/color_palette_14.jpeg"
     },
     "color_palette_15.jpeg": {
       "colors": [
-        "#7FB8C4",
+        "#8FC4CC",
         "#8B5E3C"
       ],
       "matches": {
-        "#7FB8C4": [],
         "#8B5E3C": [
           {
             "garment": "GARMENT_4.jpg",
-            "score": 12.14
+            "score": 13.43
+          }
+        ],
+        "#8FC4CC": [
+          {
+            "garment": "GARMENT_39.jpg",
+            "score": 4.76
+          },
+          {
+            "garment": "GARMENT_41.jpg",
+            "score": 9.88
+          },
+          {
+            "garment": "GARMENT_49.jpg",
+            "score": 10.38
+          },
+          {
+            "garment": "GARMENT_50.jpg",
+            "score": 11.12
+          },
+          {
+            "garment": "GARMENT_34.jpg",
+            "score": 11.12
+          },
+          {
+            "garment": "GARMENT_36.jpg",
+            "score": 12.13
           }
         ]
       },
@@ -411,44 +590,48 @@
     },
     "color_palette_16.jpeg": {
       "colors": [
-        "#9B4F7A",
-        "#B0342E"
+        "#8B3A62",
+        "#B0243E"
       ],
       "matches": {
-        "#9B4F7A": [
+        "#8B3A62": [
           {
             "garment": "GARMENT_26.jpg",
-            "score": 4.41
+            "score": 11.21
           },
           {
-            "garment": "GARMENT_30.jpg",
-            "score": 11.25
-          },
-          {
-            "garment": "GARMENT_1.jpeg",
-            "score": 14.68
-          }
-        ],
-        "#B0342E": [
-          {
-            "garment": "GARMENT_16.jpg",
-            "score": 4.95
-          },
-          {
-            "garment": "GARMENT_19.jpg",
-            "score": 7.12
-          },
-          {
-            "garment": "GARMENT_21.jpg",
-            "score": 7.91
+            "garment": "GARMENT_25.jpg",
+            "score": 11.44
           },
           {
             "garment": "GARMENT_20.jpg",
-            "score": 9.48
+            "score": 13.23
+          }
+        ],
+        "#B0243E": [
+          {
+            "garment": "GARMENT_21.jpg",
+            "score": 6.47
           },
           {
             "garment": "GARMENT_28.jpg",
-            "score": 12.26
+            "score": 6.76
+          },
+          {
+            "garment": "GARMENT_20.jpg",
+            "score": 7.05
+          },
+          {
+            "garment": "GARMENT_19.jpg",
+            "score": 10.07
+          },
+          {
+            "garment": "GARMENT_25.jpg",
+            "score": 11.19
+          },
+          {
+            "garment": "GARMENT_16.jpg",
+            "score": 12.51
           }
         ]
       },
@@ -456,40 +639,68 @@
     },
     "color_palette_17.jpeg": {
       "colors": [
-        "#8B2E3C",
-        "#C3A9C9"
+        "#B0879E",
+        "#8C2A2A"
       ],
       "matches": {
-        "#8B2E3C": [
+        "#8C2A2A": [
           {
             "garment": "GARMENT_20.jpg",
-            "score": 4.19
+            "score": 5.63
           },
           {
             "garment": "GARMENT_25.jpg",
-            "score": 5.11
-          },
-          {
-            "garment": "GARMENT_21.jpg",
-            "score": 12.21
+            "score": 8.86
           },
           {
             "garment": "GARMENT_4.jpg",
-            "score": 13.42
+            "score": 11.09
+          },
+          {
+            "garment": "GARMENT_21.jpg",
+            "score": 12.31
+          },
+          {
+            "garment": "GARMENT_16.jpg",
+            "score": 13.25
+          },
+          {
+            "garment": "GARMENT_19.jpg",
+            "score": 14.38
           },
           {
             "garment": "GARMENT_28.jpg",
-            "score": 13.61
+            "score": 14.79
           }
         ],
-        "#C3A9C9": [
+        "#B0879E": [
           {
-            "garment": "GARMENT_27.jpg",
-            "score": 9.46
+            "garment": "GARMENT_1.jpg",
+            "score": 9.23
+          },
+          {
+            "garment": "GARMENT_1.jpeg",
+            "score": 9.54
+          },
+          {
+            "garment": "GARMENT_44.jpg",
+            "score": 11.69
+          },
+          {
+            "garment": "GARMENT_43.jpg",
+            "score": 12.03
           },
           {
             "garment": "GARMENT_29.jpg",
-            "score": 13.42
+            "score": 12.58
+          },
+          {
+            "garment": "GARMENT_30.jpg",
+            "score": 13.37
+          },
+          {
+            "garment": "GARMENT_26.jpg",
+            "score": 13.6
           }
         ]
       },
@@ -497,40 +708,40 @@
     },
     "color_palette_18.jpeg": {
       "colors": [
-        "#A3B12E",
-        "#C1541C"
+        "#A8B94A",
+        "#C1541F"
       ],
       "matches": {
-        "#A3B12E": [
+        "#A8B94A": [
           {
             "garment": "GARMENT_13.jpg",
-            "score": 7.36
+            "score": 3.91
           },
           {
             "garment": "GARMENT_14.jpg",
-            "score": 10.72
+            "score": 8.74
           },
           {
-            "garment": "GARMENT_6.jpg",
-            "score": 13.2
-          },
-          {
-            "garment": "GARMENT_11.jpg",
-            "score": 14.09
+            "garment": "GARMENT_24.jpg",
+            "score": 14.84
           }
         ],
-        "#C1541C": [
-          {
-            "garment": "GARMENT_17.jpg",
-            "score": 10.09
-          },
+        "#C1541F": [
           {
             "garment": "GARMENT_16.jpg",
-            "score": 10.13
+            "score": 8.8
+          },
+          {
+            "garment": "GARMENT_17.jpg",
+            "score": 9.33
           },
           {
             "garment": "GARMENT_18.jpg",
-            "score": 14.68
+            "score": 13.84
+          },
+          {
+            "garment": "GARMENT_19.jpg",
+            "score": 14.53
           }
         ]
       },
@@ -538,28 +749,32 @@
     },
     "color_palette_19.jpeg": {
       "colors": [
-        "#4A6D9C",
-        "#6E1F2A"
+        "#3B5E8C",
+        "#5C1A2B"
       ],
       "matches": {
-        "#4A6D9C": [
+        "#3B5E8C": [
           {
             "garment": "GARMENT_2.jpg",
-            "score": 11.66
+            "score": 5.24
+          },
+          {
+            "garment": "GARMENT_33.jpg",
+            "score": 14.6
           }
         ],
-        "#6E1F2A": [
+        "#5C1A2B": [
           {
             "garment": "GARMENT_25.jpg",
-            "score": 4.7
+            "score": 6.56
           },
           {
             "garment": "GARMENT_20.jpg",
-            "score": 9.51
+            "score": 10.87
           },
           {
             "garment": "GARMENT_4.jpg",
-            "score": 13.11
+            "score": 14.05
           }
         ]
       },
@@ -567,19 +782,27 @@
     },
     "color_palette_2.jpeg": {
       "colors": [
-        "#C68A2E",
-        "#E8B8C4"
+        "#C88A2E",
+        "#F2C6CE"
       ],
       "matches": {
-        "#C68A2E": [],
-        "#E8B8C4": [
+        "#C88A2E": [],
+        "#F2C6CE": [
           {
             "garment": "GARMENT_27.jpg",
-            "score": 5.14
+            "score": 3.76
           },
           {
-            "garment": "GARMENT_29.jpg",
-            "score": 13.59
+            "garment": "GARMENT_44.jpg",
+            "score": 6.69
+          },
+          {
+            "garment": "GARMENT_54.jpg",
+            "score": 13.18
+          },
+          {
+            "garment": "GARMENT_43.jpg",
+            "score": 13.56
           }
         ]
       },
@@ -587,36 +810,32 @@
     },
     "color_palette_3.jpeg": {
       "colors": [
-        "#A8C24A",
-        "#7A1F2B"
+        "#9AC13D",
+        "#7B1E2E"
       ],
       "matches": {
-        "#7A1F2B": [
+        "#7B1E2E": [
           {
             "garment": "GARMENT_25.jpg",
-            "score": 4.77
+            "score": 2.54
           },
           {
             "garment": "GARMENT_20.jpg",
-            "score": 7.12
+            "score": 3.74
           },
           {
             "garment": "GARMENT_4.jpg",
-            "score": 13.23
+            "score": 12.44
           }
         ],
-        "#A8C24A": [
+        "#9AC13D": [
           {
             "garment": "GARMENT_13.jpg",
-            "score": 3.46
+            "score": 6.38
           },
           {
             "garment": "GARMENT_14.jpg",
-            "score": 6.5
-          },
-          {
-            "garment": "GARMENT_6.jpg",
-            "score": 12.01
+            "score": 9.17
           }
         ]
       },
@@ -624,48 +843,40 @@
     },
     "color_palette_4.jpeg": {
       "colors": [
-        "#E8D896",
-        "#E3A9C0"
+        "#E8C468",
+        "#E8A9C0"
       ],
       "matches": {
-        "#E3A9C0": [
+        "#E8A9C0": [
           {
-            "garment": "GARMENT_27.jpg",
-            "score": 8.61
+            "garment": "GARMENT_44.jpg",
+            "score": 4.8
+          },
+          {
+            "garment": "GARMENT_43.jpg",
+            "score": 5.96
           },
           {
             "garment": "GARMENT_29.jpg",
-            "score": 9.02
+            "score": 8.0
+          },
+          {
+            "garment": "GARMENT_27.jpg",
+            "score": 8.43
           }
         ],
-        "#E8D896": [
+        "#E8C468": [
           {
-            "garment": "GARMENT_6.jpg",
-            "score": 7.61
+            "garment": "GARMENT_24.jpg",
+            "score": 10.59
           },
           {
             "garment": "GARMENT_22.jpg",
-            "score": 7.84
-          },
-          {
-            "garment": "GARMENT_12.jpg",
-            "score": 8.43
-          },
-          {
-            "garment": "GARMENT_23.jpg",
-            "score": 9.17
-          },
-          {
-            "garment": "GARMENT_14.jpg",
-            "score": 10.3
-          },
-          {
-            "garment": "GARMENT_24.jpg",
-            "score": 10.44
+            "score": 11.88
           },
           {
             "garment": "GARMENT_13.jpg",
-            "score": 11.66
+            "score": 13.85
           }
         ]
       },
@@ -673,32 +884,48 @@
     },
     "color_palette_5.jpeg": {
       "colors": [
-        "#8FC1AE",
-        "#5C1A22"
+        "#8FBBAA",
+        "#4E1A22"
       ],
       "matches": {
-        "#5C1A22": [
+        "#4E1A22": [
           {
             "garment": "GARMENT_25.jpg",
-            "score": 7.7
-          },
-          {
-            "garment": "GARMENT_20.jpg",
-            "score": 13.28
+            "score": 9.64
           },
           {
             "garment": "GARMENT_4.jpg",
-            "score": 13.66
-          }
-        ],
-        "#8FC1AE": [
-          {
-            "garment": "GARMENT_5.jpg",
-            "score": 7.72
+            "score": 13.29
           },
           {
+            "garment": "GARMENT_20.jpg",
+            "score": 13.34
+          }
+        ],
+        "#8FBBAA": [
+          {
             "garment": "GARMENT_8.jpg",
-            "score": 10.14
+            "score": 8.16
+          },
+          {
+            "garment": "GARMENT_5.jpg",
+            "score": 8.62
+          },
+          {
+            "garment": "GARMENT_36.jpg",
+            "score": 12.32
+          },
+          {
+            "garment": "GARMENT_41.jpg",
+            "score": 13.32
+          },
+          {
+            "garment": "GARMENT_39.jpg",
+            "score": 13.66
+          },
+          {
+            "garment": "GARMENT_35.jpg",
+            "score": 13.83
           }
         ]
       },
@@ -706,39 +933,31 @@
     },
     "color_palette_6.jpeg": {
       "colors": [
-        "#C56D5E",
-        "#6E6A69"
+        "#C96A56",
+        "#6E6B69"
       ],
       "matches": {
-        "#6E6A69": [],
-        "#C56D5E": [
+        "#6E6B69": [],
+        "#C96A56": [
           {
             "garment": "GARMENT_17.jpg",
-            "score": 7.89
+            "score": 6.27
           },
           {
             "garment": "GARMENT_18.jpg",
-            "score": 8.15
-          },
-          {
-            "garment": "GARMENT_21.jpg",
-            "score": 11.04
-          },
-          {
-            "garment": "GARMENT_7.jpg",
-            "score": 12.53
+            "score": 7.02
           },
           {
             "garment": "GARMENT_16.jpg",
-            "score": 12.95
+            "score": 11.12
           },
           {
             "garment": "GARMENT_19.jpg",
-            "score": 13.66
+            "score": 13.14
           },
           {
-            "garment": "GARMENT_30.jpg",
-            "score": 14.02
+            "garment": "GARMENT_21.jpg",
+            "score": 13.24
           }
         ]
       },
@@ -746,65 +965,63 @@
     },
     "color_palette_7.jpeg": {
       "colors": [
-        "#5B2333",
+        "#6E4757",
         "#C0C0C0"
       ],
       "matches": {
-        "#5B2333": [
-          {
-            "garment": "GARMENT_25.jpg",
-            "score": 7.42
-          },
-          {
-            "garment": "GARMENT_20.jpg",
-            "score": 14.75
-          },
+        "#6E4757": [
           {
             "garment": "GARMENT_4.jpg",
-            "score": 14.9
-          }
-        ],
-        "#C0C0C0": [
-          {
-            "garment": "GARMENT_22.jpg",
-            "score": 13.77
+            "score": 11.92
           },
           {
-            "garment": "GARMENT_27.jpg",
-            "score": 14.14
+            "garment": "GARMENT_25.jpg",
+            "score": 12.87
+          },
+          {
+            "garment": "GARMENT_26.jpg",
+            "score": 14.62
           }
-        ]
+        ],
+        "#C0C0C0": []
       },
       "src": "/color-palettes/color_palette_7.jpeg"
     },
     "color_palette_8.jpeg": {
       "colors": [
-        "#C58A9B",
-        "#2B2420"
+        "#C48A9E",
+        "#1B1B1B"
       ],
       "matches": {
-        "#2B2420": [
-          {
-            "garment": "GARMENT_3.jpg",
-            "score": 3.37
-          }
-        ],
-        "#C58A9B": [
-          {
-            "garment": "GARMENT_7.jpg",
-            "score": 9.11
-          },
+        "#1B1B1B": [],
+        "#C48A9E": [
           {
             "garment": "GARMENT_29.jpg",
-            "score": 10.48
+            "score": 9.66
+          },
+          {
+            "garment": "GARMENT_43.jpg",
+            "score": 9.67
+          },
+          {
+            "garment": "GARMENT_1.jpg",
+            "score": 9.9
+          },
+          {
+            "garment": "GARMENT_44.jpg",
+            "score": 9.9
           },
           {
             "garment": "GARMENT_1.jpeg",
-            "score": 11.18
+            "score": 10.3
           },
           {
             "garment": "GARMENT_30.jpg",
-            "score": 12.16
+            "score": 12.23
+          },
+          {
+            "garment": "GARMENT_26.jpg",
+            "score": 14.54
           }
         ]
       },
@@ -818,42 +1035,38 @@
       "matches": {
         "#8A9A3B": [
           {
-            "garment": "GARMENT_11.jpg",
-            "score": 6.02
-          },
-          {
             "garment": "GARMENT_10.jpg",
-            "score": 8.23
+            "score": 8.47
           },
           {
             "garment": "GARMENT_13.jpg",
-            "score": 13.47
+            "score": 12.39
           }
         ],
         "#B03060": [
           {
             "garment": "GARMENT_28.jpg",
-            "score": 8.58
-          },
-          {
-            "garment": "GARMENT_20.jpg",
-            "score": 10.11
-          },
-          {
-            "garment": "GARMENT_26.jpg",
-            "score": 11.41
-          },
-          {
-            "garment": "GARMENT_30.jpg",
-            "score": 11.62
+            "score": 8.73
           },
           {
             "garment": "GARMENT_21.jpg",
-            "score": 11.76
+            "score": 10.1
+          },
+          {
+            "garment": "GARMENT_26.jpg",
+            "score": 10.39
+          },
+          {
+            "garment": "GARMENT_20.jpg",
+            "score": 11.69
+          },
+          {
+            "garment": "GARMENT_30.jpg",
+            "score": 11.73
           },
           {
             "garment": "GARMENT_25.jpg",
-            "score": 12.2
+            "score": 12.77
           }
         ]
       },

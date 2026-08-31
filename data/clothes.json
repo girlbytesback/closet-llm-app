@@ -1,12 +1,12 @@
 {
+  "GARMENT_1.jpeg": [
+    "#C173AB"
+  ],
   "GARMENT_1.jpg": [
     "#C275AC"
   ],
   "GARMENT_10.jpg": [
     "#7C8A52"
-  ],
-  "GARMENT_11.jpg": [
-    "#7E8F45"
   ],
   "GARMENT_12.jpg": [
     "#DCE0B4"
@@ -71,17 +71,83 @@
   "GARMENT_30.jpg": [
     "#C25E7E"
   ],
+  "GARMENT_31.jpg": [
+    "#1E1E22"
+  ],
+  "GARMENT_32.jpg": [
+    "#2B3040"
+  ],
+  "GARMENT_33.jpg": [
+    "#2A32A8"
+  ],
+  "GARMENT_34.jpg": [
+    "#B4C6D4"
+  ],
+  "GARMENT_36.jpg": [
+    "#93A3A3"
+  ],
+  "GARMENT_37.jpg": [
+    "#2B3038"
+  ],
+  "GARMENT_38.jpg": [
+    "#2A2E3A"
+  ],
+  "GARMENT_39.jpg": [
+    "#87B7C6"
+  ],
   "GARMENT_4.jpg": [
     "#6B4238"
+  ],
+  "GARMENT_40.jpg": [
+    "#8296B4"
+  ],
+  "GARMENT_41.jpg": [
+    "#8FA7AE"
+  ],
+  "GARMENT_42.jpg": [
+    "#B6AC8C"
+  ],
+  "GARMENT_43.jpg": [
+    "#E79CC8"
+  ],
+  "GARMENT_44.jpg": [
+    "#D8AEBE"
+  ],
+  "GARMENT_45.jpg": [
+    "#F2F1EF"
+  ],
+  "GARMENT_46.jpg": [
+    "#F5F0E8"
+  ],
+  "GARMENT_47.jpg": [
+    "#101010"
+  ],
+  "GARMENT_48.jpg": [
+    "#F2EADA"
+  ],
+  "GARMENT_49.jpg": [
+    "#B9D6E8"
   ],
   "GARMENT_5.jpg": [
     "#A8CBA4"
   ],
-  "GARMENT_6.jpg": [
-    "#C4B87A"
+  "GARMENT_50.jpg": [
+    "#AFC4D6"
   ],
-  "GARMENT_7.jpg": [
-    "#B0808A"
+  "GARMENT_51.jpg": [
+    "#7C8265"
+  ],
+  "GARMENT_52.jpg": [
+    "#15161A"
+  ],
+  "GARMENT_53.jpg": [
+    "#455B5D"
+  ],
+  "GARMENT_54.jpg": [
+    "#F7E4DA"
+  ],
+  "GARMENT_55.jpg": [
+    "#332E2E"
   ],
   "GARMENT_8.jpg": [
     "#94A891"

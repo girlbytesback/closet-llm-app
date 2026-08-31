@@ -6,13 +6,10 @@ answer_key = {
     "GARMENT_3.jpg":  "#1E1E20", #black oklou shirt
     "GARMENT_4.jpg":  "#573F3B",
     "GARMENT_5.jpg":  "#7D9681",
-    "GARMENT_6.jpg":  "", #multi color
-    "GARMENT_7.jpg":  "", #multi color
     "GARMENT_8.jpg":  "#91A193",
     "GARMENT_9.jpg":  "#544D2C",
-    "GARMENT_10.jpg": "#979C78", #unique case, has multiple shades of green 
-    "GARMENT_11.jpg": "", #multi color
-    "GARMENT_12.jpg": "", #multi color
+    "GARMENT_10.jpg": "#979C78", 
+    "GARMENT_12.jpg": "#A7A699", 
     "GARMENT_13.jpg": "#BBB97F",
     "GARMENT_14.jpg": "#D2DFA3",
     "GARMENT_15.jpg": "#273F3D",
@@ -20,5 +17,36 @@ answer_key = {
     "GARMENT_17.jpg": "#9F3829",
     "GARMENT_18.jpg": "#A12625",
     "GARMENT_19.jpg": "#9B1A21",
-    "GARMENT_20.jpg": "#751722"
+    "GARMENT_20.jpg": "#751722",
+    "GARMENT_21.jpg": "#71151B",
+    "GARMENT_22.jpg": "#BDB1A3",
+    "GARMENT_23.jpg": "#D1C6B0",
+    "GARMENT_24.jpg": "#B5AE84",
+    "GARMENT_25.jpg": "#4C1421",
+    "GARMENT_26.jpg": "#9D6687",
+    "GARMENT_27.jpg": "#BFA5BA",
+    "GARMENT_28.jpg": "#D2305B",
+    "GARMENT_29.jpg": "#D2305B",
+    "GARMENT_31.jpg": "#30303C",
+    "GARMENT_32.jpg": "#313A46",
+    "GARMENT_33.jpg": "#17224E",
+    "GARMENT_34.jpg": "#C4C6C5",
+    "GARMENT_36.jpg": "#637983",
+    "GARMENT_37.jpg": "#3A3D3F",
+    "GARMENT_38.jpg": "#3D4048",
+    "GARMENT_39.jpg": "#4B707B",
+    "GARMENT_40.jpg": "#7D869B",
+    "GARMENT_41.jpg": "#637D7C",
+    "GARMENT_42.jpg": "#999174",
+    "GARMENT_45.jpg": "#D3D2CB",
+    "GARMENT_46.jpg": "#E2E3DE",
+    "GARMENT_47.jpg": "#0B0A08",
+    "GARMENT_48.jpg": "#CBC7BF",
+    "GARMENT_49.jpg": "#B8DCDE",
+    "GARMENT_50.jpg": "#82A1A0",
+    "GARMENT_51.jpg": "#6C655A",
+    "GARMENT_52.jpg": "#020200",
+    "GARMENT_53.jpg": "#606C6C",
+    "GARMENT_54.jpg": "#D7BDBA",
+    "GARMENT_55.jpg": "#3D3432" 
 }
