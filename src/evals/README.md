@@ -1,4 +1,4 @@
-# 🖍️ Color Extraction Eval — LLM/VLM vs. Measured Truth 🖌️
+# 🖍️ Color Extraction Eval — LLM vs. Measured Result 🖌️
  
 **What this measures:** 
 
