@@ -1,157 +1,142 @@
-# Color Distance Formula Eval — CIE76 vs. CIEDE2000
 
-**What this measures:** the app has to decide *how far apart* two colors are, and
-there's more than one formula for that. This eval compares two of them —
-**CIE76** (the simple one: straight-line distance in Lab space) and **CIEDE2000**
-(the modern one, with corrections for how human vision actually works) — over the
-same 48 garment errors, to decide which the project should use.
 
-**Important:** this eval does **not** try to prove one formula is "more correct."
-There's no perceptual ground truth here to check against. What it *can* show is
-**where the two formulas disagree**, and whether those disagreements line up with
-CIE76's known weak spots. That's the honest scope.
-
+Extraction eval report · MD
+# Color Extraction Eval — VLM vs. Measured Truth
+ 
+**What this measures:** how accurately the vision model reads the dominant color
+of a garment photo, compared against colors I measured by hand with the macOS
+Digital Color Meter (sRGB). Distance is scored with **CIEDE2000 (ΔE)** — a
+perceptual color-difference metric where smaller means closer, and roughly:
+ 
+- **ΔE ≤ 2** — difference is imperceptible to the human eye
+- **ΔE ≤ 5** — barely perceptible
+- **ΔE ≤ 10** — perceptible, but still in the right color neighborhood
+- **ΔE > 10** — clearly a different color
 Sample: **48 garments.**
-
+ 
 ---
-
+ 
 ## TL;DR
-
-- **You can't compare the two by raw score.** CIE76 runs about **1.44× larger**
-  than CIEDE2000 on the same data (averages **14.2** vs **9.9**), so a fixed
-  pass/fail threshold would punish CIE76 just for using a bigger ruler. The fair
-  comparison is **ranking** — do the two formulas agree on *which* garments are
-  the worst?
-- **Mostly yes, but not always.** The two rankings agree strongly overall
-  (**Spearman ρ = 0.93**), and **8/48** garments don't move at all. But **40/48**
-  shift by at least one place, with a mean shift of **3.6** and a max of **18**.
-- **The disagreements are the interesting part**, and they cluster on exactly the
-  colors CIE76 is known to mishandle. The headline case is **GARMENT_33**, a dark
-  navy: CIE76 calls it the **single worst** error (ΔE 45.9, rank #1); CIEDE2000
-  rates it only **12th** worst (ΔE 14.8). CIE76 massively over-penalizes it.
-- **Conclusion:** use **CIEDE2000**. Not because it scored "better" (that's not a
-  meaningful claim without ground truth), but because its corrections specifically
-  target the dark/blue over-penalization CIE76 shows here, and its ordering doesn't
-  swing wildly on those cases.
-
+ 
+- The model is usable for **coarse** color matching but **not** for exact color:
+  only **9/48 (19%)** land within ΔE ≤ 5, though **32/48 (67%)** land within ΔE ≤ 10.
+- The errors are **not random**. The model consistently reports colors that are
+  **lighter and more saturated** than reality:
+  - lighter in **36/48** garments (mean **+7.3** in L\*)
+  - more saturated in **38/48** garments (mean **+5.3** in chroma)
+- The bias is **worst on dark, saturated reds and pinks** and best on **dark
+  neutrals** (near-blacks are the tightest matches).
+- Because the error has a **consistent direction**, the fix is a real engineering
+  change — sample pixels directly from the image with PIL instead of asking the
+  model to name a hex — **not** just loosening the pass threshold.
+| Threshold | Meaning | Pass rate |
+|---|---|---|
+| ΔE ≤ 2 | imperceptible | 1/48 (2%) |
+| ΔE ≤ 5 | barely perceptible | 9/48 (19%) |
+| **ΔE ≤ 10** | **perceptible, usable for palette bucketing** | **32/48 (67%)** |
+ 
+Mean ΔE = **9.9**, median ΔE = **8.1**.
+ 
 ---
-
-## Why ranking, not pass rates
-
-It's tempting to run both formulas at, say, ΔE ≤ 10 and compare how many pass. That
-would be **misleading**. CIE76 and CIEDE2000 aren't on the same scale — CIE76's
-numbers are ~1.44× bigger here by construction. Judging them against one shared
-threshold would just measure "which formula produces smaller numbers," not "which
-formula orders the errors more sensibly."
-
-So instead the eval ranks all 48 garments worst-to-best under each formula and asks:
-**do the two orderings agree?** Rank is scale-independent — it doesn't care that one
-ruler reads bigger — so it isolates the thing we actually care about: whether the
-formulas *disagree about which garments are the problem ones*.
-
+ 
+## Why the threshold is set at ΔE ≤ 10
+ 
+This eval reports a pass at **ΔE ≤ 10**, not the stricter ΔE ≤ 5. That is a
+deliberate choice tied to what the app actually needs: it sorts garments into
+broad palette buckets, not exact swatches. At ΔE ≤ 10 a color is still in the
+correct family (a muted teal reads as a muted teal), which is the tolerance the
+matching step needs.
+ 
+The looser threshold is **not** a way to hide the error — the lighter/more-saturated
+bias below is reported in full regardless of where the pass line sits. Raising the
+line changes what counts as "good enough for this product," not what the model did.
+ 
 ---
-
-## What the comparison shows
-
-**Broad agreement.** Spearman ρ = 0.93 is high. The extremes especially line up:
-the worst reds/pinks stay near the top under both formulas, and the near-blacks
-(GARMENT_47, 28, 55) stay at the bottom under both. For most garments, it wouldn't
-matter which formula you picked.
-
-**Localized disagreement.** The picture breaks down in specific places, and those
-places are telling:
-
-| Garment | CIE76 rank | CIEDE2000 rank | Shift | What it is |
+ 
+## Diagnosis — the model runs light and saturated
+ 
+The failures share one direction. The model almost always pushes colors **lighter**
+and **more vivid** than the measured truth:
+ 
+- **Lightness (L\*):** model is lighter in **36 of 48** garments, by **+7.3** on average.
+- **Chroma (saturation):** model is more saturated in **38 of 48** garments, by **+5.3** on average.
+That "same direction most of the time" is the signal that this is a **systematic
+bias**, not noise. A few concrete examples:
+ 
+- **GARMENT_29** — a punchy magenta (`#D2305B`) reported as pastel pink (`#EE8FC0`), ΔE 24.4.
+- **GARMENT_21** — a deep brick red (`#71151B`) reported as a bright rosy red (`#B94550`), ΔE 18.4.
+- The saturated reds (17, 18, 19, 21) all get dragged brighter and oranger.
+Where the model behaves: **dark neutrals**. The four tightest matches
+(GARMENT_47, 3, 55, 28) are near-blacks and one clean saturated pink — low-lightness
+colors leave little room to over-lighten.
+ 
+---
+ 
+## Next step
+ 
+The bias points to a specific fix: stop asking the model to *name* a hex code, and
+instead **sample the pixels directly** from the garment region with PIL and compute
+the dominant color deterministically. That removes the perceptual guesswork that
+produces the lightening, and it should be validated by re-running this exact eval
+and checking the mean L\* / chroma bias shrinks toward zero.
+ 
+---
+ 
+## Full results (worst to best)
+ 
+Threshold: **ΔE ≤ 10.0 = PASS.**
+ 
+| Garment | Measured (truth) | Model said | ΔE2000 | Status |
 |---|---|---|---|---|
-| GARMENT_13 | #11 (ΔE 19.6) | #29 (ΔE 7.5) | **−18** | CIE76 flags it as a top-tier error; CIEDE2000 says middling |
-| GARMENT_14 | #25 (ΔE 12.1) | #37 (ΔE 5.8) | **−12** | same pattern, smaller |
-| GARMENT_33 | **#1** (ΔE 45.9) | #12 (ΔE 14.8) | **−11** | dark navy — CIE76's "worst error," CIEDE2000 disagrees hard |
-| GARMENT_26 | #34 (ΔE 9.0) | #43 (ΔE 4.5) | **−9** | CIE76 over-weights it |
-| GARMENT_49 | #33 (ΔE 9.1) | #25 (ΔE 8.1) | **+8** | the reverse — CIEDE2000 weights it *more* |
-
-The large negative shifts (CIE76 ranks something much worse than CIEDE2000 does)
-are the signature of CIE76's core flaw: it treats every direction in Lab space as
-equally significant, so it **over-penalizes differences in dark and blue regions**
-that human eyes barely notice. GARMENT_33 (a dark navy) is the textbook example —
-CIE76's straight-line distance balloons to 45.9 while CIEDE2000's perceptual
-correction pulls it back to a much more reasonable 14.8.
-
----
-
-## Conclusion
-
-Use **CIEDE2000** as the project's distance metric.
-
-The justification is *not* "it passed more" or "it's more accurate" — this eval
-can't establish either without perceptual ground truth. The justification is:
-
-1. The two formulas genuinely disagree on ~40 of 48 garments, so the choice matters.
-2. The disagreements concentrate on dark/blue colors, which is precisely where
-   CIE76 is known to overstate differences.
-3. CIEDE2000's whole design is the correction for that failure mode.
-
-So CIEDE2000 is the better-motivated choice for a color-matching app, and this eval
-documents *why* rather than asserting it.
-
----
-
-## Full comparison (sorted by CIEDE2000, worst to best)
-
-- **CIE76** / **rank** — straight-line Lab distance and its worst-to-best position.
-- **ΔE2000** / **rank** — perceptual distance and its position.
-- **moved** — how many places the garment shifts going from CIE76 to CIEDE2000.
-  Big numbers = the two formulas disagree about that garment.
-
-| Garment | CIE76 | rank | ΔE2000 | rank | moved |
-|---|---:|:---:|---:|:---:|:---:|
-| GARMENT_29 | 40.35 | 2 | 24.43 | 1 | +1 |
-| GARMENT_39 | 26.86 | 3 | 24.12 | 2 | +1 |
-| GARMENT_1 | 21.47 | 9 | 19.34 | 3 | +6 |
-| GARMENT_18 | 21.60 | 7 | 19.32 | 4 | +3 |
-| GARMENT_21 | 23.42 | 5 | 18.39 | 5 | 0 |
-| GARMENT_17 | 22.78 | 6 | 17.43 | 6 | 0 |
-| GARMENT_12 | 25.47 | 4 | 17.34 | 7 | −3 |
-| GARMENT_36 | 17.46 | 15 | 15.69 | 8 | +7 |
-| GARMENT_5 | 20.94 | 10 | 15.52 | 9 | +1 |
-| GARMENT_41 | 17.17 | 16 | 15.45 | 10 | +6 |
-| GARMENT_50 | 18.08 | 14 | 15.07 | 11 | +3 |
-| GARMENT_33 | 45.92 | 1 | 14.82 | 12 | **−11** |
-| GARMENT_51 | 15.16 | 18 | 14.46 | 13 | +5 |
-| GARMENT_19 | 21.58 | 8 | 12.15 | 14 | −6 |
-| GARMENT_22 | 15.63 | 17 | 11.03 | 15 | +2 |
-| GARMENT_16 | 18.65 | 12 | 10.47 | 16 | −4 |
-| GARMENT_54 | 13.90 | 20 | 9.97 | 17 | +3 |
-| GARMENT_25 | 18.21 | 13 | 9.94 | 18 | −5 |
-| GARMENT_10 | 14.37 | 19 | 9.12 | 19 | 0 |
-| GARMENT_27 | 12.45 | 23 | 8.96 | 20 | +3 |
-| GARMENT_23 | 13.18 | 22 | 8.79 | 21 | +1 |
-| GARMENT_48 | 13.26 | 21 | 8.76 | 22 | −1 |
-| GARMENT_42 | 10.36 | 28 | 8.46 | 23 | +5 |
-| GARMENT_34 | 9.64 | 31 | 8.16 | 24 | +7 |
-| GARMENT_49 | 9.11 | 33 | 8.08 | 25 | **+8** |
-| GARMENT_2 | 12.10 | 24 | 7.99 | 26 | −2 |
-| GARMENT_15 | 10.70 | 27 | 7.97 | 27 | 0 |
-| GARMENT_53 | 8.64 | 36 | 7.80 | 28 | **+8** |
-| GARMENT_13 | 19.57 | 11 | 7.49 | 29 | **−18** |
-| GARMENT_31 | 10.33 | 29 | 7.42 | 30 | −1 |
-| GARMENT_45 | 11.39 | 26 | 7.42 | 31 | −5 |
-| GARMENT_4 | 10.21 | 30 | 6.60 | 32 | −2 |
-| GARMENT_40 | 8.14 | 38 | 6.57 | 33 | +5 |
-| GARMENT_38 | 8.63 | 37 | 6.26 | 34 | +3 |
-| GARMENT_20 | 9.55 | 32 | 5.77 | 35 | −3 |
-| GARMENT_9 | 8.70 | 35 | 5.76 | 36 | −1 |
-| GARMENT_14 | 12.05 | 25 | 5.75 | 37 | **−12** |
-| GARMENT_37 | 7.21 | 40 | 5.59 | 38 | +2 |
-| GARMENT_52 | 7.79 | 39 | 5.51 | 39 | 0 |
-| GARMENT_32 | 5.35 | 45 | 4.86 | 40 | +5 |
-| GARMENT_3 | 5.93 | 41 | 4.71 | 41 | 0 |
-| GARMENT_24 | 5.87 | 42 | 4.69 | 42 | 0 |
-| GARMENT_26 | 9.01 | 34 | 4.51 | 43 | **−9** |
-| GARMENT_46 | 5.59 | 43 | 4.20 | 44 | −1 |
-| GARMENT_8 | 5.59 | 44 | 4.00 | 45 | −1 |
-| GARMENT_55 | 3.91 | 47 | 3.21 | 46 | +1 |
-| GARMENT_28 | 4.04 | 46 | 2.42 | 47 | −1 |
-| GARMENT_47 | 2.10 | 48 | 1.41 | 48 | 0 |
-
-*Averages: CIE76 = 14.2, CIEDE2000 = 9.9 (1.44× larger). Ranking agreement:
-Spearman ρ = 0.93. 8/48 unchanged, mean absolute shift 3.6 places, max 18.*
+| GARMENT_29 | ![](https://placehold.co/20x20/D2305B/D2305B.png) `#D2305B` | ![](https://placehold.co/20x20/EE8FC0/EE8FC0.png) `#EE8FC0` | 24.4 | ❌ |
+| GARMENT_39 | ![](https://placehold.co/20x20/4B707B/4B707B.png) `#4B707B` | ![](https://placehold.co/20x20/87B7C6/87B7C6.png) `#87B7C6` | 24.1 | ❌ |
+| GARMENT_1 | ![](https://placehold.co/20x20/96446A/96446A.png) `#96446A` | ![](https://placehold.co/20x20/C275AC/C275AC.png) `#C275AC` | 19.3 | ❌ |
+| GARMENT_18 | ![](https://placehold.co/20x20/A12625/A12625.png) `#A12625` | ![](https://placehold.co/20x20/E8544B/E8544B.png) `#E8544B` | 19.3 | ❌ |
+| GARMENT_21 | ![](https://placehold.co/20x20/71151B/71151B.png) `#71151B` | ![](https://placehold.co/20x20/B94550/B94550.png) `#B94550` | 18.4 | ❌ |
+| GARMENT_17 | ![](https://placehold.co/20x20/9F3829/9F3829.png) `#9F3829` | ![](https://placehold.co/20x20/E15A3C/E15A3C.png) `#E15A3C` | 17.4 | ❌ |
+| GARMENT_12 | ![](https://placehold.co/20x20/A7A699/A7A699.png) `#A7A699` | ![](https://placehold.co/20x20/DCE0B4/DCE0B4.png) `#DCE0B4` | 17.3 | ❌ |
+| GARMENT_36 | ![](https://placehold.co/20x20/637983/637983.png) `#637983` | ![](https://placehold.co/20x20/93A3A3/93A3A3.png) `#93A3A3` | 15.7 | ❌ |
+| GARMENT_5 | ![](https://placehold.co/20x20/7D9681/7D9681.png) `#7D9681` | ![](https://placehold.co/20x20/A8CBA4/A8CBA4.png) `#A8CBA4` | 15.5 | ❌ |
+| GARMENT_41 | ![](https://placehold.co/20x20/637D7C/637D7C.png) `#637D7C` | ![](https://placehold.co/20x20/8FA7AE/8FA7AE.png) `#8FA7AE` | 15.5 | ❌ |
+| GARMENT_50 | ![](https://placehold.co/20x20/82A1A0/82A1A0.png) `#82A1A0` | ![](https://placehold.co/20x20/AFC4D6/AFC4D6.png) `#AFC4D6` | 15.1 | ❌ |
+| GARMENT_33 | ![](https://placehold.co/20x20/17224E/17224E.png) `#17224E` | ![](https://placehold.co/20x20/2A32A8/2A32A8.png) `#2A32A8` | 14.8 | ❌ |
+| GARMENT_51 | ![](https://placehold.co/20x20/6C655A/6C655A.png) `#6C655A` | ![](https://placehold.co/20x20/7C8265/7C8265.png) `#7C8265` | 14.5 | ❌ |
+| GARMENT_19 | ![](https://placehold.co/20x20/9B1A21/9B1A21.png) `#9B1A21` | ![](https://placehold.co/20x20/D62231/D62231.png) `#D62231` | 12.2 | ❌ |
+| GARMENT_22 | ![](https://placehold.co/20x20/BDB1A3/BDB1A3.png) `#BDB1A3` | ![](https://placehold.co/20x20/D6CBA4/D6CBA4.png) `#D6CBA4` | 11.0 | ❌ |
+| GARMENT_16 | ![](https://placehold.co/20x20/9E3134/9E3134.png) `#9E3134` | ![](https://placehold.co/20x20/C0402C/C0402C.png) `#C0402C` | 10.5 | ❌ |
+| GARMENT_54 | ![](https://placehold.co/20x20/D7BDBA/D7BDBA.png) `#D7BDBA` | ![](https://placehold.co/20x20/F7E4DA/F7E4DA.png) `#F7E4DA` | 9.97 | ✅ |
+| GARMENT_25 | ![](https://placehold.co/20x20/4C1421/4C1421.png) `#4C1421` | ![](https://placehold.co/20x20/7B1F35/7B1F35.png) `#7B1F35` | 9.9 | ✅ |
+| GARMENT_10 | ![](https://placehold.co/20x20/979C78/979C78.png) `#979C78` | ![](https://placehold.co/20x20/7C8A52/7C8A52.png) `#7C8A52` | 9.1 | ✅ |
+| GARMENT_27 | ![](https://placehold.co/20x20/BFA5BA/BFA5BA.png) `#BFA5BA` | ![](https://placehold.co/20x20/E5C3D1/E5C3D1.png) `#E5C3D1` | 9.0 | ✅ |
+| GARMENT_23 | ![](https://placehold.co/20x20/D1C6B0/D1C6B0.png) `#D1C6B0` | ![](https://placehold.co/20x20/F2E9C8/F2E9C8.png) `#F2E9C8` | 8.8 | ✅ |
+| GARMENT_48 | ![](https://placehold.co/20x20/CBC7BF/CBC7BF.png) `#CBC7BF` | ![](https://placehold.co/20x20/F2EADA/F2EADA.png) `#F2EADA` | 8.8 | ✅ |
+| GARMENT_42 | ![](https://placehold.co/20x20/999174/999174.png) `#999174` | ![](https://placehold.co/20x20/B6AC8C/B6AC8C.png) `#B6AC8C` | 8.5 | ✅ |
+| GARMENT_34 | ![](https://placehold.co/20x20/C4C6C5/C4C6C5.png) `#C4C6C5` | ![](https://placehold.co/20x20/B4C6D4/B4C6D4.png) `#B4C6D4` | 8.2 | ✅ |
+| GARMENT_49 | ![](https://placehold.co/20x20/B8DCDE/B8DCDE.png) `#B8DCDE` | ![](https://placehold.co/20x20/B9D6E8/B9D6E8.png) `#B9D6E8` | 8.1 | ✅ |
+| GARMENT_2 | ![](https://placehold.co/20x20/1B3671/1B3671.png) `#1B3671` | ![](https://placehold.co/20x20/334F84/334F84.png) `#334F84` | 8.0 | ✅ |
+| GARMENT_15 | ![](https://placehold.co/20x20/273F3D/273F3D.png) `#273F3D` | ![](https://placehold.co/20x20/1F4A3D/1F4A3D.png) `#1F4A3D` | 8.0 | ✅ |
+| GARMENT_53 | ![](https://placehold.co/20x20/606C6C/606C6C.png) `#606C6C` | ![](https://placehold.co/20x20/455B5D/455B5D.png) `#455B5D` | 7.8 | ✅ |
+| GARMENT_13 | ![](https://placehold.co/20x20/BBB97F/BBB97F.png) `#BBB97F` | ![](https://placehold.co/20x20/B7C464/B7C464.png) `#B7C464` | 7.5 | ✅ |
+| GARMENT_31 | ![](https://placehold.co/20x20/30303C/30303C.png) `#30303C` | ![](https://placehold.co/20x20/1E1E22/1E1E22.png) `#1E1E22` | 7.4 | ✅ |
+| GARMENT_45 | ![](https://placehold.co/20x20/D3D2CB/D3D2CB.png) `#D3D2CB` | ![](https://placehold.co/20x20/F2F1EF/F2F1EF.png) `#F2F1EF` | 7.4 | ✅ |
+| GARMENT_4 | ![](https://placehold.co/20x20/573F3B/573F3B.png) `#573F3B` | ![](https://placehold.co/20x20/6B4238/6B4238.png) `#6B4238` | 6.6 | ✅ |
+| GARMENT_40 | ![](https://placehold.co/20x20/7D869B/7D869B.png) `#7D869B` | ![](https://placehold.co/20x20/8296B4/8296B4.png) `#8296B4` | 6.6 | ✅ |
+| GARMENT_38 | ![](https://placehold.co/20x20/3D4048/3D4048.png) `#3D4048` | ![](https://placehold.co/20x20/2A2E3A/2A2E3A.png) `#2A2E3A` | 6.3 | ✅ |
+| GARMENT_20 | ![](https://placehold.co/20x20/751722/751722.png) `#751722` | ![](https://placehold.co/20x20/8E1D33/8E1D33.png) `#8E1D33` | 5.8 | ✅ |
+| GARMENT_9 | ![](https://placehold.co/20x20/544D2C/544D2C.png) `#544D2C` | ![](https://placehold.co/20x20/5C5A2C/5C5A2C.png) `#5C5A2C` | 5.8 | ✅ |
+| GARMENT_14 | ![](https://placehold.co/20x20/D2DFA3/D2DFA3.png) `#D2DFA3` | ![](https://placehold.co/20x20/B9D183/B9D183.png) `#B9D183` | 5.8 | ✅ |
+| GARMENT_37 | ![](https://placehold.co/20x20/3A3D3F/3A3D3F.png) `#3A3D3F` | ![](https://placehold.co/20x20/2B3038/2B3038.png) `#2B3038` | 5.6 | ✅ |
+| GARMENT_52 | ![](https://placehold.co/20x20/020200/020200.png) `#020200` | ![](https://placehold.co/20x20/15161A/15161A.png) `#15161A` | 5.5 | ✅ |
+| GARMENT_32 | ![](https://placehold.co/20x20/313A46/313A46.png) `#313A46` | ![](https://placehold.co/20x20/2B3040/2B3040.png) `#2B3040` | 4.9 | ✅ |
+| GARMENT_3 | ![](https://placehold.co/20x20/1E1E20/1E1E20.png) `#1E1E20` | ![](https://placehold.co/20x20/2A2724/2A2724.png) `#2A2724` | 4.7 | ✅ |
+| GARMENT_24 | ![](https://placehold.co/20x20/B5AE84/B5AE84.png) `#B5AE84` | ![](https://placehold.co/20x20/C4B183/C4B183.png) `#C4B183` | 4.7 | ✅ |
+| GARMENT_26 | ![](https://placehold.co/20x20/9D6687/9D6687.png) `#9D6687` | ![](https://placehold.co/20x20/A85C7E/A85C7E.png) `#A85C7E` | 4.5 | ✅ |
+| GARMENT_46 | ![](https://placehold.co/20x20/E2E3DE/E2E3DE.png) `#E2E3DE` | ![](https://placehold.co/20x20/F5F0E8/F5F0E8.png) `#F5F0E8` | 4.2 | ✅ |
+| GARMENT_8 | ![](https://placehold.co/20x20/91A193/91A193.png) `#91A193` | ![](https://placehold.co/20x20/94A891/94A891.png) `#94A891` | 4.0 | ✅ |
+| GARMENT_55 | ![](https://placehold.co/20x20/3D3432/3D3432.png) `#3D3432` | ![](https://placehold.co/20x20/332E2E/332E2E.png) `#332E2E` | 3.2 | ✅ |
+| GARMENT_28 | ![](https://placehold.co/20x20/D2305B/D2305B.png) `#D2305B` | ![](https://placehold.co/20x20/CE2751/CE2751.png) `#CE2751` | 2.4 | ✅ |
+| GARMENT_47 | ![](https://placehold.co/20x20/0B0A08/0B0A08.png) `#0B0A08` | ![](https://placehold.co/20x20/101010/101010.png) `#101010` | 1.4 | ✅ |
+ 
+*Note: GARMENT_54's raw ΔE is 9.9687 — it rounds to 10.0 in display but is
+genuinely below the threshold, so it passes. Counting the rounded column would
+have mislabeled it. Pass count is 32/48.*

@@ -20,8 +20,6 @@
 | #8 | ![](https://placehold.co/20x20/91A193/91A193.png) `#91A193` | ![](https://placehold.co/20x20/94A891/94A891.png) `#94A891` | 4.0 | PASS |
 
 
-
-
 **Extraction eval: model vs. answer key — 9/48 pass at ΔE < 5.0**
 
 | Garment | Measured (truth) | Model said | ΔE2000 | Status |
