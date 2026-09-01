@@ -1,18 +1,15 @@
 # 🖍️ Color Extraction Eval — LLM/VLM vs. Measured Truth 🖌️
  
-**What this measures:** how accurately the model reads the dominant color
-of a garment photo, compared against colors measured by hand.
-Distance is scored with the **CIEDE2000 (ΔE)** math formula — a
-color-difference calculation where smaller means closer, and roughly:
- 
+**What this measures:** 
+
+How accurately the model reads colors of a garment photo, compared to an answer key generated manually. Distance (ΔE) is scored with the **CIEDE2000 (ΔE)** math formula — 3D Cartesian coordinate system where color difference is calculated using a modified 3D Pythagorean theorem called Delta E (Δ E)
+
 - **ΔE ≤ 2.0 - 5.0** — difference barely noticable to the human eye
-- **ΔE ≤ 10** — perceptible, but still in the right color neighborhood
-- **ΔE > 10** — clearly a different color
+- **ΔE ≤ 10.0** — still in correct color family
+- **ΔE > 10.0** — clearly a different color
 
 sample size: **48 garments.**
- 
----
- 
+  
 ## TLDR !! 💭
  
 The model is effective at generating the main color of a garment, but will not **produce exact color,
@@ -23,16 +20,11 @@ will often just return one from a similar color family**.
   **lighter and more saturated** than reality:
   - lighter in **36/48** garments (mean **+7.3** in L\*)
   - more saturated in **38/48** garments (mean **+5.3** in chroma)
+
 - The bias is **worst on dark, saturated reds and pinks** and best on **dark
   neutrals** (near-blacks are the tightest matches).
-- Because the error has a **consistent direction**, the fix is a real engineering
-  change — sample pixels directly from the image with PIL instead of asking the
-  model to name a hex — **not** just loosening the pass threshold.
-| Threshold | Meaning | Pass rate |
-|---|---|---|
-| ΔE ≤ 2 | imperceptible | 1/48 (2%) |
-| ΔE ≤ 5 | barely perceptible | 9/48 (19%) |
-| **ΔE ≤ 10** | **perceptible, usable for palette bucketing** | **32/48 (67%)** |
+
+ Because the error has a **consistent direction**, the fix requires an engineering change (using libraries, more math, etc...) instead of changing what model is used.
  
 Mean ΔE = **9.9**, median ΔE = **8.1**.
  
@@ -40,15 +32,14 @@ Mean ΔE = **9.9**, median ΔE = **8.1**.
  
 ## Why the threshold is set at ΔE ≤ 10:
  
-This eval reports a pass at **ΔE ≤ 10**, not the stricter ΔE ≤ 5. That is a
-deliberate choice tied to what the app actually needs: it sorts garments into
+This eval reports a pass at **ΔE ≤ 10**, not the stricter ΔE ≤ 5. This is a
+deliberate design choice tied to what the app actually needs: it sorts garments into
 broad palette buckets, not exact swatches. At ΔE ≤ 10 a color is still in the
 correct family (a muted teal reads as a muted teal), which is the tolerance the
 matching step needs.
  
 The looser threshold is **not** a way to hide the error — the lighter/more-saturated
-bias below is reported in full regardless of where the pass line sits. Raising the
-line changes what counts as "good enough for this product," not what the model did.
+bias below is reported in full regardless of where the pass line sits.
  
 ---
  
@@ -62,20 +53,22 @@ and **more vivid** than the measured truth:
 That "same direction most of the time" is the signal that this is a **systematic
 bias**, not noise. A few concrete examples:
  
-- **GARMENT_29** — a punchy magenta (`#D2305B`) reported as pastel pink (`#EE8FC0`), ΔE 24.4.
-- **GARMENT_21** — a deep brick red (`#71151B`) reported as a bright rosy red (`#B94550`), ΔE 18.4.
-- The saturated reds (17, 18, 19, 21) all get dragged brighter and oranger.
-Where the model behaves: **dark neutrals**. The four tightest matches
-(GARMENT_47, 3, 55, 28) are near-blacks and one clean saturated pink — low-lightness
-colors leave little room to over-lighten.
+- `GARMENT_29` : a hot pink top (`#D2305B`) reported by model as pastel pink (`#EE8FC0`), ΔE 24.4.
+- `GARMENT_21` : a brick shade of red (`#71151B`) reported by model as a rosy red, almost pink (`#B94550`), ΔE 18.4.
  
 ---
  
 ## Addressing Biases:
+
+The model outputs the best results with : **dark neutrals**. The four closest matches
+`GARMENT_47`, `GARMENT_3`, `GARMENT_55`, `GARMENT_28`) are near-blacks and one clean saturated pink, meaning low-lightness
+colors leave little room to over-lighten.
  
 The bias points to a specific fix: stop asking the model to *name* a hex code, and
-instead **sample the pixels directly** from the garment region with PIL and compute
-the dominant color deterministically. That removes the perceptual guesswork that
+instead **sample the pixels directly** from the garment region and compute
+the dominant color deterministically. 
+
+This removes the perceptual guesswork that
 produces the lightening, and it should be validated by re-running this exact eval
 and checking the mean L\* / chroma bias shrinks toward zero.
  
