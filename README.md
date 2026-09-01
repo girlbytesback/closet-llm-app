@@ -1,5 +1,4 @@
 #  `closetLLM` documentation 👗🎨
-❗❗ IN PROGRESS, continuously updating and currently adding full fledged API documentation.. ❗❗
 
 ## 🌀 About the Project:
 

@@ -35,7 +35,7 @@ def compute_matches(threshold: float = default_cutoff) -> dict:
     }
 
 def build_matches(results: dict, cutoff: float) -> dict:
-    #shape the scores into the document the web UI reads.
+    #shape + return the scores into doc the web UI reads
     garments = load_data(garment_hex_colors)
     return {
         "meta": {
