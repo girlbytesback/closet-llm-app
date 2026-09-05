@@ -19,7 +19,7 @@ will often just return one from a similar color family**.
 - The errors are **not random**. The model consistently reports colors that are
   **lighter and more saturated** than reality:
   - lighter in **36/48** garments (mean **+7.3** in L\*)
-  - more saturated in **38/48** garments (mean **+5.3** in chroma)
+  - more saturated in **38/48** garments (mean **+5.4** in chroma)
 
 - The bias is **worst on dark, saturated reds and pinks** and best on **dark
   neutrals** (near-blacks are the tightest matches).
@@ -49,7 +49,7 @@ The failures share one direction. The model almost always pushes colors **lighte
 and **more vivid** than the measured truth:
  
 - **Lightness (L\*):** model is lighter in **36 of 48** garments, by **+7.3** on average.
-- **Chroma (saturation):** model is more saturated in **38 of 48** garments, by **+5.3** on average.
+- **Chroma (saturation):** model is more saturated in **38 of 48** garments, by **+5.4** on average.
 That "same direction most of the time" is the signal that this is a **systematic
 bias**, not noise. A few concrete examples:
  

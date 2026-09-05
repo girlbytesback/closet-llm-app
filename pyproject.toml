@@ -21,7 +21,14 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/closetllm"]
 
+[tool.pytest.ini_options]
+testpaths = ["src/test"]
+# so `evals` and `closetllm` import the same way with or without the editable install
+pythonpath = ["src"]
+addopts = "-ra"
+
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "pytest>=8.4.2",
 ]

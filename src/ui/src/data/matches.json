@@ -6,12 +6,6 @@
       ],
       "src": "/clothes/GARMENT_1.jpeg"
     },
-    "GARMENT_1.jpg": {
-      "colors": [
-        "#C275AC"
-      ],
-      "src": "/clothes/GARMENT_1.jpg"
-    },
     "GARMENT_10.jpg": {
       "colors": [
         "#7C8A52"
@@ -168,12 +162,6 @@
       ],
       "src": "/clothes/GARMENT_34.jpg"
     },
-    "GARMENT_35.jpg": {
-      "colors": [
-        "#A3A69B"
-      ],
-      "src": "/clothes/GARMENT_35.jpg"
-    },
     "GARMENT_36.jpg": {
       "colors": [
         "#93A3A3"
@@ -321,7 +309,7 @@
   },
   "meta": {
     "cutoff": 15.0,
-    "garment_count": 53,
+    "garment_count": 51,
     "palette_count": 19
   },
   "palettes": {
@@ -387,10 +375,6 @@
           {
             "garment": "GARMENT_24.jpg",
             "score": 11.28
-          },
-          {
-            "garment": "GARMENT_35.jpg",
-            "score": 12.31
           },
           {
             "garment": "GARMENT_23.jpg",
@@ -675,10 +659,6 @@
         ],
         "#B0879E": [
           {
-            "garment": "GARMENT_1.jpg",
-            "score": 9.23
-          },
-          {
             "garment": "GARMENT_1.jpeg",
             "score": 9.54
           },
@@ -922,10 +902,6 @@
           {
             "garment": "GARMENT_39.jpg",
             "score": 13.66
-          },
-          {
-            "garment": "GARMENT_35.jpg",
-            "score": 13.83
           }
         ]
       },
@@ -1002,10 +978,6 @@
           {
             "garment": "GARMENT_43.jpg",
             "score": 9.67
-          },
-          {
-            "garment": "GARMENT_1.jpg",
-            "score": 9.9
           },
           {
             "garment": "GARMENT_44.jpg",

@@ -9,7 +9,7 @@ LLM model (Claude Vision Language Model) reads the dominant colors out of each g
 **The interesting part is the eval.** I hand-measured a 48-garment
 answer key and scored the model against it: only 9/48 extractions land
 within ΔE ≤ 5 (32/48 within ΔE ≤ 10), and the misses aren't random —
-the model reads colors lighter (+7.3 L*) and more saturated (+5.3
+the model reads colors lighter (+7.3 L*) and more saturated (+5.4
 chroma) than reality, worst on dark saturated reds.
 
 

@@ -1,7 +1,7 @@
 # measured using HEX color tool - serves as source of truth
 
 answer_key = {
-    "GARMENT_1.jpg":  "#96446A",
+    "GARMENT_1.jpeg": "#96446A",
     "GARMENT_2.jpg":  "#1B3671",
     "GARMENT_3.jpg":  "#1E1E20", #black oklou shirt
     "GARMENT_4.jpg":  "#573F3B",

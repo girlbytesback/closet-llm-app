@@ -22,7 +22,7 @@ def get_color_palettes():
     palettes = load_data(palette_hex_colors)
     if not palettes:
             raise HTTPException(status_code=404, detail="no palettes saved yet")
-    return {"count": len(palettes), "garments": palettes}
+    return {"count": len(palettes), "palettes": palettes}
 
 @app.get("/color-matches")
 def get_color_matches(threshold: float = default_cutoff):
