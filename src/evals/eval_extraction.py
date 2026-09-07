@@ -8,7 +8,7 @@ from closetllm.config import garment_hex_colors
 
 from evals.answer_key import answer_key
 #to be tweaked
-THRESHOLD = 5.0
+THRESHOLD = 10.0
 
 def compare_model_truth(answer_key, model_colors):
     results = []

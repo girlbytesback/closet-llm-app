@@ -76,8 +76,10 @@ def test_the_worst_miss_is_still_a_dark_saturated_red(graded):
     assert gap == pytest.approx(24.43, abs=0.01)
 
 
-def test_the_pass_threshold_the_report_prints_is_still_five():
-    assert THRESHOLD == 5.0
+def test_the_pass_threshold_the_report_prints_is_still_ten():
+    # src/evals/README.md publishes its results table at "ΔE <= 10.0 = PASS" and
+    # explains the choice — the app sorts into palette families, not exact swatches
+    assert THRESHOLD == 10.0
 
 
 def test_cie76_reads_larger_than_ciede2000_across_the_whole_set():
