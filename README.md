@@ -6,8 +6,6 @@ Matches garments from my closet against color palettes manually uploaded from Pi
 
 LLM model (Claude Vision Language Model) reads the dominant colors out of each garment photo and returns the clothing items that match color palette, using mathematics + color/computer vision calculations
 
-![TESTS](https://github.com/girlbytesback/closet-llm-app/actions/workflows/tests.yml/badge.svg)
-
 **The interesting part is the eval.** I hand-measured a 48-garment
 answer key and scored the model against it: only 9/48 extractions land
 within ΔE ≤ 5 (32/48 within ΔE ≤ 10), and the misses aren't random —
