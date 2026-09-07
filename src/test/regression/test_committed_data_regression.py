@@ -77,7 +77,7 @@ def test_no_duplicate_colours_within_one_entry(store):
 
 
 # -------------------------------------------------------- store vs. folder
-
+@needs_photos
 def test_every_garment_photo_has_been_extracted():
     missing = photos_in(garment_folder) - set(load_data(garment_hex_colors))
     assert not missing, f"run `closetllm clothes` — not yet extracted: {sorted(missing)}"
