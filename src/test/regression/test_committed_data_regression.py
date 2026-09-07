@@ -94,7 +94,6 @@ def test_every_extracted_garment_still_has_its_photo():
     stale = set(load_data(garment_hex_colors)) - photos_in(garment_folder)
     assert not stale, f"no photo on disk for: {sorted(stale)}"
 
-@needs_photos
 def test_every_extracted_palette_still_has_its_photo():
     stale = set(load_data(palette_hex_colors)) - photos_in(color_palettes_folder)
     assert not stale, f"no photo on disk for: {sorted(stale)}"
