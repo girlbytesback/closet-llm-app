@@ -20,7 +20,7 @@ def test_similar_matches_order():
     names = [name for name, _ in matches_for_color(RED, garments)]
     assert names == ["near", "mid"]
 
-def test_threshold_cutoff():
+def test_cutoff():
     garments = {"near": [NEAR_RED], "mid": [MID_RED]}
     generous = matches_for_color(RED, garments, cutoff=50.0)
     strict   = matches_for_color(RED, garments, cutoff=1.0)
@@ -48,7 +48,7 @@ def test_muted_beige_reads_as_neutral():
 
 
 def test_neutral_cutoff_is_the_boundary_that_decides():
-    # documents the dependency: is_neutral is a threshold call on chroma, so a
+    # documents the dependency: is_neutral is a cutoff call on chroma, so a
     # change to neutral_chroma is a behavior change, not a tuning detail
     from closetllm.color import hex_to_lab, lab_to_lch
 
@@ -60,7 +60,7 @@ def test_matches_are_sorted_closest_first():
     names = [name for name, _ in matches_for_color(RED, garments)]
     assert names == ["near", "mid"]
 
-def test_cutoff_excludes_anything_above_the_threshold():
+def test_cutoff_excludes_anything_above_it():
     garments = {"near": [NEAR_RED], "mid": [MID_RED]}
 
     generous = matches_for_color(RED, garments, cutoff=50.0)

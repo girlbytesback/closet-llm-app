@@ -21,13 +21,13 @@ def get_garments():
 def get_color_palettes():
     palettes = load_data(palette_hex_colors)
     if not palettes:
-            raise HTTPException(status_code=404, detail="no palettes saved yet")
+        raise HTTPException(status_code=404, detail="no palettes saved yet")
     return {"count": len(palettes), "palettes": palettes}
 
 @app.get("/color-matches")
-def get_color_matches(threshold: float = default_cutoff):
+def get_color_matches(cutoff: float = default_cutoff):
     try:
-        data = compute_matches(threshold)
+        data = compute_matches(cutoff)
     except FileNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error))
-    return build_matches(data, threshold)
+    return build_matches(data, cutoff)

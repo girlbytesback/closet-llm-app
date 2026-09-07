@@ -65,7 +65,7 @@ def test_the_default_cutoff_is_still_fifteen():
     assert default_cutoff == 15.0
 
 
-def test_the_neutral_chroma_threshold_is_still_twelve():
+def test_the_neutral_chroma_cutoff_is_still_twelve():
     assert neutral_chroma == 12.0
 
 
@@ -88,7 +88,7 @@ def test_the_neutral_verdict_for_known_colours(hex_value, neutral):
 
 
 def test_the_beige_that_sits_closest_to_the_boundary():
-    # documents how much headroom the threshold has: raising it past ~4.8 would
+    # documents how much headroom the cutoff has: raising it past ~4.8 would
     # not change this verdict, lowering it past 4.7 would
     assert lab_to_lch(hex_to_lab("#B5B0A8"))[1] == pytest.approx(4.7340, abs=1e-3)
 

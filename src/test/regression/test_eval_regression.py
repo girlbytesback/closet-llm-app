@@ -16,7 +16,7 @@ from closetllm.color import hex_to_lab, lab_to_lch
 from closetllm.config import garment_hex_colors
 from closetllm.extract import load_data
 from evals.answer_key import answer_key
-from evals.eval_extraction import THRESHOLD, compare_model_truth
+from evals.eval_extraction import CUTOFF, compare_model_truth
 from evals.eval_math_comparison import compare_model_formula
 
 
@@ -76,10 +76,10 @@ def test_the_worst_miss_is_still_a_dark_saturated_red(graded):
     assert gap == pytest.approx(24.43, abs=0.01)
 
 
-def test_the_pass_threshold_the_report_prints_is_still_ten():
+def test_the_pass_cutoff_the_report_prints_is_still_ten():
     # src/evals/README.md publishes its results table at "ΔE <= 10.0 = PASS" and
     # explains the choice — the app sorts into palette families, not exact swatches
-    assert THRESHOLD == 10.0
+    assert CUTOFF == 10.0
 
 
 def test_cie76_reads_larger_than_ciede2000_across_the_whole_set():

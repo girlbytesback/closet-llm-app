@@ -41,7 +41,7 @@ There's no perceptual ground truth here to check against. What it *does* show is
 
 - **You can't compare the two by raw score.** CIE76 runs about **1.44× larger**
   than CIEDE2000 on the same data (averages **14.2** vs **9.9**), so a fixed
-  pass/fail threshold would punish CIE76 just for using a bigger ruler. 
+  pass/fail cutoff would punish CIE76 just for using a bigger ruler. 
 
 - **The fair comparison is **ranking** — do the two formulas agree on *which* garments are
   the worst?** The two rankings agree strongly overall, and **8/48** garments don't move at all. But **40/48**
@@ -59,8 +59,8 @@ There's no perceptual ground truth here to check against. What it *does* show is
 
 ## Why evalute by ranking?
 
-It's tempting to run both formulas at the same threshold and compare how many pass, but this is **misleading** as CIE76 and CIEDE2000 do not use the same scale (CIE76's numbers are ~1.44× bigger here by construction. Judging them against one shared
-threshold would just measure *"which formula produces smaller numbers," NOT "which
+It's tempting to run both formulas at the same cutoff and compare how many pass, but this is **misleading** as CIE76 and CIEDE2000 do not use the same scale (CIE76's numbers are ~1.44× bigger here by construction. Judging them against one shared
+cutoff would just measure *"which formula produces smaller numbers," NOT "which
 formula orders the errors more sensibly."*
 
 So instead the eval ranks all 48 garments worst-to-best under each formula and asks:

@@ -1,7 +1,7 @@
 [project]
 name = "closetllm"
 version = "0.1.0"
-description = "Add your description here"
+description = "Match closet garments to inspiration found online"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
