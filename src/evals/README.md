@@ -30,7 +30,7 @@ Mean ΔE = **9.9**, median ΔE = **8.1**.
  
 ---
  
-## Why the threshold is set at ΔE ≤ 10:
+## Why the cutoff is set at ΔE ≤ 10:
  
 This eval reports a pass at **ΔE ≤ 10**, not the stricter ΔE ≤ 5. This is a
 deliberate design choice tied to what the app actually needs: it sorts garments into
@@ -38,7 +38,7 @@ broad palette buckets, not exact swatches. At ΔE ≤ 10 a color is still in the
 correct family (a muted teal reads as a muted teal), which is the tolerance the
 matching step needs.
  
-The looser threshold is **not** a way to hide the error — the lighter/more-saturated
+The looser cutoff is **not** a way to hide the error — the lighter/more-saturated
 bias below is reported in full regardless of where the pass line sits.
  
 ---
@@ -76,7 +76,7 @@ and checking the mean L\* / chroma bias shrinks toward zero.
  
 ## RESULTS:
  
-Threshold: **ΔE ≤ 10.0 = PASS.**
+Cutoff: **ΔE ≤ 10.0 = PASS.**
  
 | Garment | Measured (truth) | Model said | ΔE2000 | Status |
 |---|---|---|---|---|
@@ -130,5 +130,5 @@ Threshold: **ΔE ≤ 10.0 = PASS.**
 | GARMENT_29 | ![](https://placehold.co/20x20/D2305B/D2305B.png) `#D2305B` | ![](https://placehold.co/20x20/EE8FC0/EE8FC0.png) `#EE8FC0` | 24.4 | ❌ |
  
 *Note: GARMENT_54's raw ΔE is 9.9687 — it rounds to 10.0 in display but is
-genuinely below the threshold, so it passes. Counting the rounded column would
+genuinely below the cutoff, so it passes. Counting the rounded column would
 have mislabeled it. Pass count is 32/48.*

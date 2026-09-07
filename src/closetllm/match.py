@@ -21,7 +21,7 @@ from closetllm.config import (
 )
 from closetllm.extract import load_data, save_data
 
-def compute_matches(threshold: float = default_cutoff) -> dict:
+def compute_matches(cutoff: float = default_cutoff) -> dict:
     color_palettes = load_data(palette_hex_colors)
     garments = load_data(garment_hex_colors)
 
@@ -30,7 +30,7 @@ def compute_matches(threshold: float = default_cutoff) -> dict:
     if not garments:
         raise FileNotFoundError("no clothes saved yet")
     return {
-        name: matches_for_color_palette(palette_colors, garments, threshold)
+        name: matches_for_color_palette(palette_colors, garments, cutoff)
         for name, palette_colors in sorted(color_palettes.items())
     }
 
@@ -73,7 +73,7 @@ def build_matches(results: dict, cutoff: float) -> dict:
 def write_matches(results: dict, path: Path, cutoff: float) -> None:
     save_data(build_matches(results, cutoff), path)
 
-def print_matches(results: dict, threshold: float, limit: Optional[int] = None) -> None:
+def print_matches(results: dict, cutoff: float, limit: Optional[int] = None) -> None:
     # compute_matches already returns {palette: {palette_color: [(garment, score)]}},
     # so printing is a walk over that — no second pass over the garments
     for palette_name, by_color in sorted(results.items()):
@@ -81,7 +81,7 @@ def print_matches(results: dict, threshold: float, limit: Optional[int] = None) 
         print(f"\n{palette_name}  {' '.join(by_color)}")
 
         if not found:
-            print(f"  nothing under {threshold:g}")
+            print(f"  nothing under {cutoff:g}")
             continue
 
         # one block per palette color — a palette is two separate questions,
@@ -94,18 +94,18 @@ def print_matches(results: dict, threshold: float, limit: Optional[int] = None) 
                 print(f"  {palette_color}  {score:5.1f}  {name}  ")
 
 def run_matches(
-    threshold: float = default_cutoff,
+    cutoff: float = default_cutoff,
     limit: Optional[int] = None,
     out: Optional[Path] = None,
 ) -> dict:
     # the printout and the exported file are the same set of matches, both cut
-    # at the same threshold — what you read in the terminal is what the UI gets
-    results = compute_matches(threshold)
+    # at the same cutoff — what you read in the terminal is what the UI gets
+    results = compute_matches(cutoff)
 
-    print_matches(results, threshold, limit)
+    print_matches(results, cutoff, limit)
 
     if out is not None:
-        write_matches(results, out, threshold)
+        write_matches(results, out, cutoff)
         print(f"\nwrote {out}")
 
     return results

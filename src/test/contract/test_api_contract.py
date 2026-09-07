@@ -94,14 +94,14 @@ def test_meta_reports_the_cutoff_and_both_counts(client, seeded):
     assert meta["palette_count"] == len(SAMPLE_PALETTES)
 
 
-def test_the_threshold_query_parameter_reaches_meta(client, seeded):
-    meta = client.get("/color-matches", params={"threshold": 3.5}).json()["meta"]
+def test_the_cutoff_query_parameter_reaches_meta(client, seeded):
+    meta = client.get("/color-matches", params={"cutoff": 3.5}).json()["meta"]
     assert meta["cutoff"] == 3.5
 
 
-def test_the_threshold_actually_filters(client, seeded):
-    loose = client.get("/color-matches", params={"threshold": 15}).json()
-    tight = client.get("/color-matches", params={"threshold": 1}).json()
+def test_the_cutoff_actually_filters(client, seeded):
+    loose = client.get("/color-matches", params={"cutoff": 15}).json()
+    tight = client.get("/color-matches", params={"cutoff": 1}).json()
 
     def hits(body):
         return len(body["palettes"]["sage_palette.jpeg"]["matches"][SAGE])
@@ -109,8 +109,8 @@ def test_the_threshold_actually_filters(client, seeded):
     assert hits(loose) > hits(tight)
 
 
-def test_a_non_numeric_threshold_is_a_422(client, seeded):
-    response = client.get("/color-matches", params={"threshold": "close-ish"})
+def test_a_non_numeric_cutoff_is_a_422(client, seeded):
+    response = client.get("/color-matches", params={"cutoff": "close-ish"})
     assert response.status_code == 422
 
 

@@ -8,7 +8,7 @@ from closetllm.config import garment_hex_colors
 
 from evals.answer_key import answer_key
 #to be tweaked
-THRESHOLD = 10.0
+CUTOFF = 10.0
 
 def compare_model_truth(answer_key, model_colors):
     results = []
@@ -31,12 +31,12 @@ def generate_eval_report(results):
         print("answer key doesnt exist")
         return
     
-    passed = [row for row in results if row[3] < THRESHOLD]
+    passed = [row for row in results if row[3] < CUTOFF]
     average = sum(row[3] for row in results) / len(results)
     worst = max(results, key=lambda row: row[3])
  
     print(f"\nmeasured:    {len(results)} garments")
-    print(f"pass rate:   {len(passed)}/{len(results)}  (gap < {THRESHOLD})")
+    print(f"pass rate:   {len(passed)}/{len(results)}  (gap < {CUTOFF})")
     print(f"average gap: {average:.1f}")
     print(f"worst miss:  {worst[0]}  "
           f"(measured {worst[1]}, model said {worst[2]}, gap {worst[3]:.1f})")
@@ -45,7 +45,7 @@ def generate_eval_report(results):
     for garment_file_name, actual_hex, model_hex, difference in sorted(
         results, key=lambda row: row[3], reverse=True
     ):
-        status = "PASS" if difference < THRESHOLD else "FAIL"
+        status = "PASS" if difference < CUTOFF else "FAIL"
         print(f"  [{status}] {garment_file_name}  "
               f"measured {actual_hex}, model said {model_hex}, gap {difference:.1f}")
 

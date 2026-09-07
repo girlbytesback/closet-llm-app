@@ -60,17 +60,17 @@ def test_a_neutral_palette_colour_keeps_its_slot_but_matches_nothing(seeded):
     assert results["sage_palette.jpeg"][NEAR_BLACK] == []
 
 
-def test_a_tighter_threshold_drops_the_looser_match(seeded):
-    tight = compute_matches(threshold=1.0)["sage_palette.jpeg"][SAGE]
+def test_a_tighter_cutoff_drops_the_looser_match(seeded):
+    tight = compute_matches(cutoff=1.0)["sage_palette.jpeg"][SAGE]
     assert [name for name, _ in tight] == ["sage_shirt.jpeg"]
 
 
-def test_a_zero_threshold_matches_nothing(seeded):
-    results = compute_matches(threshold=0.0)
+def test_a_zero_cutoff_matches_nothing(seeded):
+    results = compute_matches(cutoff=0.0)
     assert all(hits == [] for by_color in results.values() for hits in by_color.values())
 
 
-def test_the_default_threshold_is_the_shared_cutoff(seeded):
+def test_the_default_cutoff_is_the_shared_cutoff(seeded):
     assert compute_matches() == compute_matches(default_cutoff)
 
 
@@ -233,11 +233,11 @@ def test_run_matches_writes_the_file_and_says_where(seeded, tmp_path, capsys):
     assert f"wrote {out}" in capsys.readouterr().out
 
 
-def test_run_matches_cuts_the_printout_and_the_file_at_the_same_threshold(
+def test_run_matches_cuts_the_printout_and_the_file_at_the_same_cutoff(
     seeded, tmp_path, capsys
 ):
     out = tmp_path / "matches.json"
-    run_matches(threshold=1.0, out=out)
+    run_matches(cutoff=1.0, out=out)
 
     printed = capsys.readouterr().out
     written = json.loads(out.read_text())

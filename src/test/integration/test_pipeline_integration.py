@@ -181,7 +181,7 @@ def test_the_api_picks_up_data_written_after_it_started(closet, jobs_in_tmp, fak
     assert http.get("/garments").json()["count"] == 4
 
 
-def test_the_threshold_travels_from_the_query_string_to_the_scores(
+def test_the_cutoff_travels_from_the_query_string_to_the_scores(
     closet, jobs_in_tmp, fake_model, capsys
 ):
     fake_model(*GARMENT_REPLIES, *PALETTE_REPLIES)
@@ -191,8 +191,8 @@ def test_the_threshold_travels_from_the_query_string_to_the_scores(
     http = TestClient(api.app)
     olive_score = distance(SAGE, OLIVE)
 
-    just_under = http.get("/color-matches", params={"threshold": olive_score - 0.01}).json()
-    just_over = http.get("/color-matches", params={"threshold": olive_score + 0.01}).json()
+    just_under = http.get("/color-matches", params={"cutoff": olive_score - 0.01}).json()
+    just_over = http.get("/color-matches", params={"cutoff": olive_score + 0.01}).json()
 
     def names(body):
         return [h["garment"] for h in body["palettes"]["sage_palette.jpeg"]["matches"][SAGE]]
