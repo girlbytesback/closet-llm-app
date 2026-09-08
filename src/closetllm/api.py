@@ -1,15 +1,28 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from closetllm.color import default_cutoff
 from closetllm.extract import load_data
 from closetllm.match import build_matches, compute_matches
 from closetllm.config import garment_hex_colors, palette_hex_colors
 from closetllm.schemas import GarmentsResponse, MatchesResponse, PalettesResponse
 
+import json
+import logging
+
+log = logging.getLogger("closetllm")
 app = FastAPI(title="closetLLM")
 
 @app.get("/health")
 def health():
     return {"ok": True}
+
+@app.exception_handler(json.JSONDecodeError)
+def corrupt_data(request: Request, exc: json.JSONDecodeError):
+    log.error("corrupt data storage while serving %s: %s", request.url.path, exc)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "data storage is corrupt; re-run extraction"},
+    )
 
 @app.get("/garments", response_model=GarmentsResponse)
 def get_garments():

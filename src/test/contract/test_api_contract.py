@@ -190,6 +190,88 @@ def test_the_response_is_json_serialisable_as_sent(client, seeded):
     assert response.headers["content-type"].startswith("application/json")
 
 
+# ----------------------------------------------------- corrupt data storage
+
+TRUNCATED = '{"sage_shirt.jpeg": ["#B5C29A"'
+CORRUPT_DETAIL = "data storage is corrupt; re-run extraction"
+
+
+def write_corrupt(path):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(TRUNCATED)
+
+
+def test_a_truncated_garment_store_is_a_500_not_a_traceback(client, data_paths):
+    # load_data raises JSONDecodeError rather than reading as {}; the handler
+    # turns that into an envelope the UI can render
+    write_corrupt(data_paths.garments)
+    response = client.get("/garments")
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": CORRUPT_DETAIL}
+
+
+def test_a_truncated_palette_store_is_a_500(client, data_paths):
+    write_corrupt(data_paths.palettes)
+    response = client.get("/color-palettes")
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": CORRUPT_DETAIL}
+
+
+def test_matches_reports_corruption_in_either_store(client, seeded):
+    for path in (seeded.garments, seeded.palettes):
+        good = path.read_text()
+        write_corrupt(path)
+
+        response = client.get("/color-matches")
+        assert response.status_code == 500, path.name
+        assert response.json() == {"detail": CORRUPT_DETAIL}
+
+        path.write_text(good)
+
+
+def test_corruption_is_500_not_the_404_empty_store_case(client, data_paths):
+    # "re-run extraction" and "you haven't extracted yet" are different fixes,
+    # so the UI must not see them as the same status
+    write_corrupt(data_paths.garments)
+    assert client.get("/garments").status_code != 404
+
+
+def test_one_corrupt_store_does_not_take_down_the_other(client, data_paths):
+    save_data(SAMPLE_PALETTES, data_paths.palettes)
+    write_corrupt(data_paths.garments)
+
+    assert client.get("/garments").status_code == 500
+    assert client.get("/color-palettes").status_code == 200
+
+
+def test_health_survives_a_corrupt_store(client, data_paths):
+    # liveness must not go red just because the JSON on disk is bad
+    write_corrupt(data_paths.garments)
+    assert client.get("/health").status_code == 200
+
+
+def test_the_corrupt_response_is_json(client, data_paths):
+    write_corrupt(data_paths.garments)
+    response = client.get("/garments")
+    assert response.headers["content-type"].startswith("application/json")
+
+
+def test_the_corrupt_response_does_not_leak_the_path(client, data_paths):
+    # the detail is user-facing; the filesystem layout stays in the log
+    write_corrupt(data_paths.garments)
+    assert str(data_paths.garments) not in client.get("/garments").text
+
+
+def test_corruption_is_logged_with_the_request_path(client, data_paths, caplog):
+    write_corrupt(data_paths.garments)
+    with caplog.at_level("ERROR", logger="closetllm"):
+        client.get("/garments")
+
+    assert any("/garments" in r.getMessage() for r in caplog.records)
+
+
 # ------------------------------------------------------------ route surface
 
 @pytest.mark.parametrize("path", ["/health", "/garments", "/color-palettes", "/color-matches"])
