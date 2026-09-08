@@ -114,6 +114,17 @@ def test_a_non_numeric_cutoff_is_a_422(client, seeded):
     assert response.status_code == 422
 
 
+def test_a_negative_cutoff_is_a_422(client, seeded):
+    # ΔE is a distance, so below zero can never match anything
+    response = client.get("/color-matches", params={"cutoff": -1})
+    assert response.status_code == 422
+
+
+def test_a_cutoff_past_the_ceiling_is_a_422(client, seeded):
+    response = client.get("/color-matches", params={"cutoff": 1000})
+    assert response.status_code == 422
+
+
 def test_matches_is_404_when_nothing_is_extracted(client):
     response = client.get("/color-matches")
 
