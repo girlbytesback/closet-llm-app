@@ -1,5 +1,4 @@
-import React, { useState, useRef } from "react";
-import data from "./data/matches.json";
+import React, { useState, useRef, useEffect } from "react";
 
 // Font used for the little pixel-style labels.
 const MONO = "Silkscreen, monospace";
@@ -34,30 +33,22 @@ const NAMES = {
 // which sorting on the filename wouldn't.
 const number = (file) => Number(file.match(/\d+/)?.[0] ?? 0);
 
-// matches.json is keyed by filename and points at garments by name. The UI
-// wants a sorted list of ready-to-draw objects, so that join happens once here
-// instead of inside every component that renders a garment.
-const PALETTES = Object.entries(data.palettes)
-  .map(([file, palette]) => ({
-    id: file,
-    cue: String(number(file)).padStart(2, "0"),
-    name: NAMES[file] ?? `PALETTE ${String(number(file)).padStart(2, "0")}`,
-    img: palette.src,
-    colors: palette.colors,
-    // one group per palette color — a palette asks two separate questions, so
-    // the answers stay separate here too
-    groups: palette.colors.map((hex) => ({
-      hex,
-      hits: (palette.matches[hex] ?? []).map((hit) => ({
-        ...hit,
-        src: data.garments[hit.garment]?.src,
-      })),
-    })),
-  }))
-  .sort((a, b) => number(a.id) - number(b.id));
-
 // How much bigger the profile pop-ups draw than they measure.
 const PROFILE_SCALE = 1.3;
+
+// Shown while the closet is loading, or if the API can't be reached. Borrows the
+// same pink wallpaper + pixel font as the desktop so the wait doesn't look broken.
+function StatusScreen({ text }) {
+  return (
+    <div style={{
+      width: "100%", height: "100vh", display: "grid", placeItems: "center",
+      background: "radial-gradient(120% 90% at 78% 12%, #ffc5e6 0%, #f7b8dd 26%, #e9c3d8 52%, #d9d3cf 74%, #cfd6cc 100%)",
+      fontFamily: MONO, fontSize: 12, letterSpacing: ".08em", color: "#9a5b7c",
+    }}>
+      {text}
+    </div>
+  );
+}
 
 const hitCount = (pal) => pal.groups.reduce((n, g) => n + g.hits.length, 0);
 
@@ -74,15 +65,28 @@ function Swatch({ hex }) {
 // One garment photo, straight out of the closet folder. The number under it is
 // the color distance — lower is closer, so the list already reads best-first.
 function Garment({ hit, size }) {
+  // A garment photo may be absent once we deploy (the clothes/ folder is
+  // gitignored). If the image 404s, fall back to a labeled swatch instead of a
+  // broken-image icon, so the match is still visible.
+  const [broken, setBroken] = useState(false);
   return (
     <div style={{ display: "grid", justifyItems: "center", gap: 3 }}>
-      <img
-        src={hit.src}
-        alt={hit.garment}
-        title={`${hit.garment} · ${hit.score}`}
-        draggable={false}
-        style={{ width: size, height: size, objectFit: "cover", borderRadius: 4, border: "1px solid #e79cc4", background: "#fff", display: "block" }}
-      />
+      {broken || !hit.src ? (
+        <div title={`${hit.garment} · ${hit.score}`} style={{
+          width: size, height: size, borderRadius: 4, border: "1px solid #e79cc4",
+          background: hit.hex ?? "#f0d0e0", display: "grid", placeItems: "center",
+          fontFamily: MONO, fontSize: 6, color: "#fff", textAlign: "center", padding: 2, boxSizing: "border-box",
+        }}>{hit.garment}</div>
+      ) : (
+        <img
+          src={hit.src}
+          alt={hit.garment}
+          title={`${hit.garment} · ${hit.score}`}
+          draggable={false}
+          onError={() => setBroken(true)}
+          style={{ width: size, height: size, objectFit: "cover", borderRadius: 4, border: "1px solid #e79cc4", background: "#fff", display: "block" }}
+        />
+      )}
       <span style={{ fontFamily: MONO, fontSize: 7, color: "#c0468f" }}>{hit.score.toFixed(1)}</span>
     </div>
   );
@@ -108,12 +112,57 @@ function MatchRow({ group, size }) {
   );
 }
 
-export default function PickYourCharacter() {
+export default function ClosetLLM() {
+  // ── Data: fetched from the API after mount, so it starts empty ──
+  const [data, setData] = useState(null);   // the matches document, once it arrives
+  const [error, setError] = useState(null); // a message if the fetch failed
+
+  useEffect(() => {
+    // Runs once, AFTER the first render. The empty [] dependency list is what
+    // means "once, on mount" (not on every re-render).
+    fetch("/color-matches")
+      .then((res) => {
+        if (!res.ok) throw new Error(`server said ${res.status}`);
+        return res.json();
+      })
+      .then(setData)                              // success → store it → re-render
+      .catch((err) => setError(err.message));     // network/parse failure
+  }, []);
+
   // ── State: the things that change while you use the app ──
   const [picked, setPicked] = useState(null);        // which palette is chosen
   const [windows, setWindows] = useState([]);        // open profile pop-ups
   const [main, setMain] = useState({ x: 44, y: 74 }); // position of the big window
   const zc = useRef(40);                              // stacking counter for pop-ups
+
+  // Until the fetch resolves, draw a status card and nothing else. These early
+  // returns are why every data.* read below is safe — we never reach them unless
+  // data exists.
+  if (error) return <StatusScreen text={`COULD NOT LOAD: ${error}`} />;
+  if (!data) return <StatusScreen text="LOADING YOUR CLOSET…" />;
+
+  // matches.json is keyed by filename and points at garments by name. The UI
+  // wants a sorted list of ready-to-draw objects, so that join happens once here
+  // instead of inside every component that renders a garment. (Was a top-level
+  // const; now lives here because it depends on the fetched data.)
+  const PALETTES = Object.entries(data.palettes)
+    .map(([file, palette]) => ({
+      id: file,
+      cue: String(number(file)).padStart(2, "0"),
+      name: NAMES[file] ?? `PALETTE ${String(number(file)).padStart(2, "0")}`,
+      img: palette.src,
+      colors: palette.colors,
+      // one group per palette color — a palette asks two separate questions, so
+      // the answers stay separate here too
+      groups: palette.colors.map((hex) => ({
+        hex,
+        hits: (palette.matches[hex] ?? []).map((hit) => ({
+          ...hit,
+          src: data.garments[hit.garment]?.src,
+        })),
+      })),
+    }))
+    .sort((a, b) => number(a.id) - number(b.id));
 
   const pickedPal = PALETTES.find((p) => p.id === picked);
 

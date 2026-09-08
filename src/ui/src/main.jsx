@@ -1,5 +1,5 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import PickYourCharacter from "./PickYourCharacter.jsx";
+import ClosetLLM from "./closetLLM.jsx";
 
-createRoot(document.getElementById("root")).render(<PickYourCharacter />);
+createRoot(document.getElementById("root")).render(<ClosetLLM />);

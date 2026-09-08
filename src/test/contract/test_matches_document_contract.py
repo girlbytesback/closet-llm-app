@@ -1,6 +1,6 @@
 """The matches.json document, checked against what the UI dereferences.
 
-src/ui/src/PickYourCharacter.jsx reads, specifically:
+src/ui/src/closetLLM.jsx reads, specifically:
 
     data.palettes[file].src
     data.palettes[file].colors           -> mapped to one group per swatch

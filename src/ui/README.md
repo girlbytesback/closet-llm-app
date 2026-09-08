@@ -32,6 +32,6 @@ Press Ctrl + C in the terminal to stop it.
 
 - index.html ............ the empty page the app draws into
 - src/main.jsx .......... starts the app
-- src/PickYourCharacter.jsx  the actual UI (photos + colors live here)
+- src/closetLLM.jsx ..... the actual UI (photos + colors live here)
 - package.json .......... the list of tools this app needs
 - vite.config.js ........ tells the build tool it's a React app
