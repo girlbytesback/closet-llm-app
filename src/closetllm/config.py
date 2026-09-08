@@ -1,17 +1,21 @@
+import os
 from pathlib import Path
 
-# Anchored to the repo root (this file lives at src/closetllm/config.py) so the
-# CLI works from any directory, not just wherever the folders happen to be relative.
 project_root = Path(__file__).resolve().parents[2]
 
-garment_folder = project_root / "clothes"
-color_palettes_folder = project_root / "color-palettes"
+# Data location is overridable so a container can mount it elsewhere.
+# Everything downstream is derived from this one directory.
+data_dir = Path(os.environ.get("CLOSETLLM_DATA_DIR", project_root / "data"))
 
-# Extracted palettes are saved here so each photo costs one model call ever. The
-# model doesn't return the same HEX codes twice for the same image, so this file
-# is also what keeps the palettes stable between runs.
-palette_hex_colors = project_root / "data/colors.json"
-garment_hex_colors = project_root / "data/clothes.json"
+palette_hex_colors = data_dir / "colors.json"
+garment_hex_colors = data_dir / "clothes.json"
+
+# Photo source folders — also overridable, same reasoning.
+garment_folder = Path(os.environ.get("CLOSETLLM_GARMENT_DIR", project_root / "clothes"))
+color_palettes_folder = Path(os.environ.get("CLOSETLLM_PALETTE_DIR", project_root / "color-palettes"))
+
+# Log verbosity, consumed in Phase 6's middleware.
+log_level = os.environ.get("CLOSETLLM_LOG_LEVEL", "INFO")
 
 # Derived from the two files above exists bc the browser can't run Python.
 # It lands inside the UI app because that's the only place Vite will import
