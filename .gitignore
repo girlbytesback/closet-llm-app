@@ -38,8 +38,3 @@ htmlcov/
 
 # Claude Code local overrides (a shared settings.json stays tracked)
 .claude/settings.local.json
-
-# Wardrobe photos — personal, and binaries bloat git history permanently.
-# Delete this line if you'd rather version the images.
-clothes/
-src/ui/public/clothes
