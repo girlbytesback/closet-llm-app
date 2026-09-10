@@ -52,4 +52,3 @@ def get_color_matches(
     except FileNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error))
     return build_matches(data, cutoff)
-    
