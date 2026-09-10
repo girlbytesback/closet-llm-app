@@ -61,7 +61,7 @@ def test_extract_then_match_then_serve(closet, jobs_in_tmp, fake_model, capsys):
     hits = body["palettes"]["sage_palette.jpeg"]["matches"][SAGE]
     assert [h["garment"] for h in hits] == ["sage_shirt.jpeg", "olive_pants.jpeg"]
     assert body["palettes"]["sage_palette.jpeg"]["matches"][NEAR_BLACK] == []
-    assert body["garments"]["pink dress.jpeg"]["src"] == "/clothes/pink%20dress.jpeg"
+    assert body["garments"]["pink dress.jpeg"]["src"] == "/garments/pink%20dress.jpeg"
 
 
 def test_the_second_extraction_run_costs_nothing(closet, jobs_in_tmp, fake_model, capsys):

@@ -1,6 +1,6 @@
 """Invariants over the JSON that's committed to the repo.
 
-data/clothes.json and data/colors.json are not test fixtures — they're paid-for
+data/garments.json and data/colors.json are not test fixtures — they're paid-for
 model output that the eval, the CLI and the UI all read. A malformed entry
 there is a bug that no amount of code testing catches, so it's checked here
 directly.
@@ -25,7 +25,7 @@ from closetllm.extract import load_data
 HEX = re.compile(r"^#[0-9A-F]{6}$")
 
 STORES = [
-    pytest.param(garment_hex_colors, id="clothes.json"),
+    pytest.param(garment_hex_colors, id="garments.json"),
     pytest.param(palette_hex_colors, id="colors.json"),
 ]
 

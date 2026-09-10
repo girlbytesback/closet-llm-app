@@ -133,7 +133,7 @@ def test_extract_colors_raises_when_the_reply_was_cut_short(photo_folder, fake_m
 @pytest.fixture
 def job(tmp_path):
     """garment_job, pointed at a throwaway JSON store."""
-    return dataclasses.replace(garment_job, json_data=tmp_path / "clothes.json")
+    return dataclasses.replace(garment_job, json_data=tmp_path / "garments.json")
 
 
 def test_run_raises_when_the_folder_is_missing(tmp_path, job):

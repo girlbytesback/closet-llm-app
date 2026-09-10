@@ -7,7 +7,7 @@ from evals.answer_key import answer_key
 # EVALUATES WHICH FORMULA IS THE BETTER ONE TO USE
 
 
-# Load the model's guesses from clothes.json — same as your extraction eval
+# Load the model's guesses from garments.json — same as your extraction eval
 # Walk the answer key, skip blanks — same loop you already have
 # For each garment, compute two distances instead of one ← the only new part
 # Rank the garments under each formula
@@ -20,7 +20,7 @@ def compare_model_formula(answer_key, model_colors):
         if not actual_hex:
             continue #to be compared later bc blank rn
         if garment_file_name not in model_colors:
-            print(f"{garment_file_name} is not found in clothes.json")
+            print(f"{garment_file_name} is not found in garments.json")
             continue
         model_hex = model_colors[garment_file_name][0]
         cie76_difference = raw_distance(hex_to_lab(actual_hex), hex_to_lab(model_hex))

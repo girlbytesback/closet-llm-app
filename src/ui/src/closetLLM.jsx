@@ -65,7 +65,7 @@ function Swatch({ hex }) {
 // One garment photo, straight out of the closet folder. The number under it is
 // the color distance — lower is closer, so the list already reads best-first.
 function Garment({ hit, size }) {
-  // A garment photo may be absent once we deploy (the clothes/ folder is
+  // A garment photo may be absent once we deploy (the garments/ folder is
   // gitignored). If the image 404s, fall back to a labeled swatch instead of a
   // broken-image icon, so the match is still visible.
   const [broken, setBroken] = useState(false);

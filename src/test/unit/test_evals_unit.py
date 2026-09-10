@@ -41,7 +41,7 @@ def test_a_garment_the_model_never_saw_is_reported_and_skipped(capsys):
     rows = compare_model_truth({**KEY, "missing.jpg": "#123456"}, GUESSES)
 
     assert len(rows) == 2
-    assert "missing.jpg is not found in clothes.json" in capsys.readouterr().out
+    assert "missing.jpg is not found in garments.json" in capsys.readouterr().out
 
 
 def test_only_the_first_colour_of_a_garment_is_graded():

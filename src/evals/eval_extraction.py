@@ -17,7 +17,7 @@ def compare_model_truth(answer_key, model_colors):
         if not actual_hex:
             continue #to be compared later bc blank rn
         if garment_file_name not in model_colors:
-            print(f"{garment_file_name} is not found in clothes.json")
+            print(f"{garment_file_name} is not found in garments.json")
             continue
         model_hex = model_colors[garment_file_name][0]
         difference = distance(actual_hex, model_hex)

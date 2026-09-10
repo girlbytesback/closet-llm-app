@@ -50,7 +50,7 @@ def test_a_small_photo_is_left_alone(photo_folder):
 
 
 def test_shrinking_keeps_the_payload_well_under_the_api_limit(photo_folder):
-    # Claude rejects images over 5MB; the phone photos in clothes/ exceed it raw
+    # Claude rejects images over 5MB; the phone photos in garments/ exceed it raw
     block = image_block(photo_folder.add("big.jpeg", size=(4000, 3000)))
     assert len(base64.standard_b64decode(block["source"]["data"])) < 5 * 1024 * 1024
 

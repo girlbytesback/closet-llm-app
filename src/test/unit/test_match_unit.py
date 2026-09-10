@@ -103,14 +103,14 @@ def test_a_garment_carries_its_colours_and_an_image_url(seeded):
 
     assert doc["garments"]["sage_shirt.jpeg"] == {
         "colors": [NEAR_SAGE],
-        "src": "/clothes/sage_shirt.jpeg",
+        "src": "/garments/sage_shirt.jpeg",
     }
 
 
 def test_a_space_in_a_filename_is_percent_encoded(seeded):
     # an unquoted space breaks the <img src> in the browser
     doc = build_matches(compute_matches(), default_cutoff)
-    assert doc["garments"]["pink dress.jpeg"]["src"] == "/clothes/pink%20dress.jpeg"
+    assert doc["garments"]["pink dress.jpeg"]["src"] == "/garments/pink%20dress.jpeg"
 
 
 def test_a_palette_carries_its_colours_in_order(seeded):

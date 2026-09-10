@@ -5,7 +5,7 @@
     saturated (+5.4 chroma) than reality, worst on dark saturated reds.
 
 These are the project's headline claim. They depend on three committed things:
-the hand-measured answer key, data/clothes.json, and the distance function. If
+the hand-measured answer key, data/garments.json, and the distance function. If
 any of them moves, the README is wrong until it's updated — that's what this
 file is for. No model call happens here; the guesses are already on disk.
 """
@@ -25,7 +25,7 @@ def graded():
     """The real answer key scored against the real committed extractions."""
     rows = compare_model_truth(answer_key, load_data(garment_hex_colors))
     if not rows:
-        pytest.skip("data/clothes.json is empty — run `closetllm clothes` first")
+        pytest.skip("data/garments.json is empty — run `closetllm clothes` first")
     return rows
 
 
@@ -87,7 +87,7 @@ def test_cie76_reads_larger_than_ciede2000_across_the_whole_set():
     # numbers down, so a cutoff tuned on one formula is wrong for the other
     rows = compare_model_formula(answer_key, load_data(garment_hex_colors))
     if not rows:
-        pytest.skip("data/clothes.json is empty")
+        pytest.skip("data/garments.json is empty")
 
     cie76 = sum(row[3] for row in rows) / len(rows)
     cie2000 = sum(row[4] for row in rows) / len(rows)

@@ -143,7 +143,7 @@ def test_matches_is_404_when_only_palettes_exist(client, data_paths):
 def test_every_garment_entry_carries_colors_and_a_src(client, seeded):
     for entry in client.get("/color-matches").json()["garments"].values():
         assert set(entry) == {"colors", "src"}
-        assert entry["src"].startswith("/clothes/")
+        assert entry["src"].startswith("/garments/")
 
 
 def test_every_palette_entry_carries_colors_a_src_and_matches(client, seeded):

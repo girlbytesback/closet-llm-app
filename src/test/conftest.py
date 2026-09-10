@@ -52,7 +52,7 @@ def data_paths(tmp_path, monkeypatch):
     written here — an unseeded store is the "nothing extracted yet" case, which
     several tests depend on.
     """
-    garments = tmp_path / "data" / "clothes.json"
+    garments = tmp_path / "data" / "garments.json"
     palettes = tmp_path / "data" / "colors.json"
 
     for module in (match, api):
