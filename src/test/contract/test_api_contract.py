@@ -8,6 +8,7 @@ tested there — these tests only care about the envelope.
 import pytest
 
 from closetllm.color import default_cutoff
+from closetllm.config import garment_url_prefix, palette_url_prefix
 from closetllm.extract import save_data
 
 from conftest import NEAR_BLACK, SAGE, SAMPLE_GARMENTS, SAMPLE_PALETTES
@@ -143,13 +144,13 @@ def test_matches_is_404_when_only_palettes_exist(client, data_paths):
 def test_every_garment_entry_carries_colors_and_a_src(client, seeded):
     for entry in client.get("/color-matches").json()["garments"].values():
         assert set(entry) == {"colors", "src"}
-        assert entry["src"].startswith("/garments/")
+        assert entry["src"].startswith(garment_url_prefix + "/")
 
 
 def test_every_palette_entry_carries_colors_a_src_and_matches(client, seeded):
     for entry in client.get("/color-matches").json()["palettes"].values():
         assert set(entry) == {"colors", "src", "matches"}
-        assert entry["src"].startswith("/color-palettes/")
+        assert entry["src"].startswith(palette_url_prefix + "/")
 
 
 def test_a_palette_has_one_match_list_per_colour(client, seeded):

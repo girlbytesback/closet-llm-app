@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 from closetllm import api, cli, extract
 from closetllm.color import default_cutoff, distance
+from closetllm.config import garment_url_prefix
 from closetllm.match import build_matches, compute_matches
 
 from conftest import NEAR_BLACK, NEAR_SAGE, OLIVE, PINK, NEAR_PINK, SAGE
@@ -61,7 +62,7 @@ def test_extract_then_match_then_serve(closet, jobs_in_tmp, fake_model, capsys):
     hits = body["palettes"]["sage_palette.jpeg"]["matches"][SAGE]
     assert [h["garment"] for h in hits] == ["sage_shirt.jpeg", "olive_pants.jpeg"]
     assert body["palettes"]["sage_palette.jpeg"]["matches"][NEAR_BLACK] == []
-    assert body["garments"]["pink dress.jpeg"]["src"] == "/garments/pink%20dress.jpeg"
+    assert body["garments"]["pink dress.jpeg"]["src"] == f"{garment_url_prefix}/pink%20dress.jpeg"
 
 
 def test_the_second_extraction_run_costs_nothing(closet, jobs_in_tmp, fake_model, capsys):

@@ -117,9 +117,21 @@ def test_url_prefixes_are_absolute_and_unslashed():
         assert prefix.startswith("/") and not prefix.endswith("/")
 
 
-def test_the_url_prefixes_name_the_photo_folders_the_ui_symlinks():
-    assert config.garment_url_prefix == "/" + config.garment_folder.name
-    assert config.palette_url_prefix == "/" + config.color_palettes_folder.name
+def test_the_url_prefixes_are_mounted_under_img_and_name_the_photo_folders():
+    # /img keeps the image URLs clear of the JSON routes: /garments is already
+    # an endpoint, so the photos cannot also live at /garments/<file>.
+    assert config.garment_url_prefix == "/img/" + config.garment_folder.name
+    assert config.palette_url_prefix == "/img/" + config.color_palettes_folder.name
+
+
+def test_the_url_prefixes_do_not_collide_with_the_json_routes():
+    # the collision this layout exists to prevent — a prefix that shadows an
+    # endpoint makes one of the two unreachable
+    from closetllm.api import app
+
+    routes = {r.path for r in app.routes}
+    for prefix in (config.garment_url_prefix, config.palette_url_prefix):
+        assert prefix not in routes
 
 
 def test_image_extensions_are_lowercase_and_dotted():
