@@ -31,6 +31,12 @@ palette_url_prefix = "/img/color-palettes"
 
 img_types = {".jpeg", ".jpg", ".png"}
 
+# Web-sized copies of the garment photos, written by scripts/resize_imgs.py.
+# The originals in garments/ stay local; this folder is committed so a git-based
+# deploy ships the images. 600px is plenty — the UI draws them at ~70px.
+web_garment_folder = Path(os.environ.get("CLOSETLLM_WEB_GARMENT_DIR", project_root / "assets/garments"))
+web_max_edge = 600
+
 # Claude caps images at 5MB and downscales anything over 1568px on the long edge
 # anyway, so shrink before sending — the phone photos in garments/ are well over both.
 max_edge = 1568
