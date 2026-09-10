@@ -24,7 +24,13 @@ app = FastAPI(title="closetLLM")
 
 @app.get("/health")
 def health():
-    return {"ok": True}
+    garments = load_data(garment_hex_colors)
+    palettes = load_data(palette_hex_colors)
+    return {
+        "ok": bool(garments and palettes),
+        "garments": len(garments),
+        "palettes": len(palettes),
+    }
 
 @app.exception_handler(json.JSONDecodeError)
 def corrupt_data(request: Request, exc: json.JSONDecodeError):
