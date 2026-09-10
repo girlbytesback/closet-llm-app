@@ -24,9 +24,10 @@ palette_matches = project_root / "src/ui/src/data/matches.json"
 
 # Where the browser will find the photos. Python owns these so the UI never has
 # to know how the images get served — it just renders the src it's handed.
-# src/ui/public/ symlinks both folders, which is what makes these paths resolve.
-garment_url_prefix = "/garments"
-palette_url_prefix = "/color-palettes"
+# FastAPI mounts these prefixes onto the photo folders (see api.py); in dev,
+# Vite proxies /img straight through to FastAPI so both environments match.
+garment_url_prefix = "/img/garments"
+palette_url_prefix = "/img/color-palettes"
 
 img_types = {".jpeg", ".jpg", ".png"}
 
