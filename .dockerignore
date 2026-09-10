@@ -1,0 +1,9 @@
+.git
+.venv
+node_modules
+src/ui/node_modules
+src/ui/dist
+garments/
+.env
+__pycache__
+*.pyc
