@@ -7,7 +7,9 @@ from closetllm.match import build_matches, compute_matches
 from closetllm.config import (
     color_palettes_folder,
     garment_hex_colors,
+    garment_url_prefix,
     palette_hex_colors,
+    palette_url_prefix,
     project_root,
     web_garment_folder,
 )
@@ -71,13 +73,17 @@ def get_color_matches(
 # is constructed — at import time. Without them, importing this module fails
 # anywhere the folders are absent, which includes CI and the test suite.
 
+# The mount paths come from config, not string literals: match.py builds every
+# "src" in the matches document from those same two values, so a literal here
+# that drifts from config serves 404s for photos the UI is already asking for.
+#
 # Garment photos are served from the web-sized copies, not the originals: the
 # multi-MB originals stay local and only feed offline extraction.
 if web_garment_folder.exists():
-    app.mount("/img/clothes", StaticFiles(directory=web_garment_folder), name="clothes")
+    app.mount(garment_url_prefix, StaticFiles(directory=web_garment_folder), name="garments")
 
 if color_palettes_folder.exists():
-    app.mount("/img/color-palettes", StaticFiles(directory=color_palettes_folder), name="palettes")
+    app.mount(palette_url_prefix, StaticFiles(directory=color_palettes_folder), name="palettes")
 
 # The built React app. html=True serves index.html at "/", which is what makes
 # this a single-origin deployment: one process answers HTML, images and JSON,

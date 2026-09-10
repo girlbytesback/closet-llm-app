@@ -127,11 +127,33 @@ def test_the_url_prefixes_are_mounted_under_img_and_name_the_photo_folders():
 def test_the_url_prefixes_do_not_collide_with_the_json_routes():
     # the collision this layout exists to prevent — a prefix that shadows an
     # endpoint makes one of the two unreachable
+    from fastapi.routing import APIRoute
+
     from closetllm.api import app
 
-    routes = {r.path for r in app.routes}
+    # APIRoute only: the photo mounts are registered at these exact prefixes, so
+    # comparing against every route would flag the correct layout as a collision.
+    json_routes = {r.path for r in app.routes if isinstance(r, APIRoute)}
     for prefix in (config.garment_url_prefix, config.palette_url_prefix):
-        assert prefix not in routes
+        assert prefix not in json_routes
+        # a mount also swallows everything beneath it, so a prefix that is a
+        # parent of an endpoint makes that endpoint unreachable too
+        assert not any(route.startswith(prefix + "/") for route in json_routes)
+
+
+def test_the_photo_mounts_are_registered_at_the_configured_prefixes():
+    # match.py stamps every "src" with these prefixes, so a mount at any other
+    # path serves 404s for photos the UI is already asking for. Skipped per
+    # folder when it is absent, because api.py only mounts folders that exist.
+    from starlette.routing import Mount
+
+    from closetllm.api import app
+
+    mounts = {r.path for r in app.routes if isinstance(r, Mount)}
+    if config.web_garment_folder.exists():
+        assert config.garment_url_prefix in mounts
+    if config.color_palettes_folder.exists():
+        assert config.palette_url_prefix in mounts
 
 
 def test_image_extensions_are_lowercase_and_dotted():
