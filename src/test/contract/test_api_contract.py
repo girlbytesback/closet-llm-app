@@ -23,6 +23,43 @@ def test_health_is_always_200(client):
     assert response.json() == {"ok": True}
 
 
+# ------------------------------------------------------------------ /stats
+
+def test_stats_counts_what_is_in_the_store(client, seeded):
+    response = client.get("/stats")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "ok": True,
+        "garments": len(SAMPLE_GARMENTS),
+        "palettes": len(SAMPLE_PALETTES),
+    }
+
+
+def test_stats_is_200_with_zeroes_before_anything_is_extracted(client):
+    # unlike /garments, an empty store is the answer here rather than a 404
+    response = client.get("/stats")
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": False, "garments": 0, "palettes": 0}
+
+
+def test_stats_is_not_ok_when_only_one_store_is_populated(client, data_paths):
+    # nothing can be matched until both halves exist
+    save_data(SAMPLE_GARMENTS, data_paths.garments)
+    body = client.get("/stats").json()
+
+    assert body == {"ok": False, "garments": len(SAMPLE_GARMENTS), "palettes": 0}
+
+
+def test_stats_reports_corruption_like_the_other_data_routes(client, data_paths):
+    write_corrupt(data_paths.garments)
+    response = client.get("/stats")
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": CORRUPT_DETAIL}
+
+
 # --------------------------------------------------------------- /garments
 
 def test_garments_returns_a_count_and_a_mapping(client, seeded):
@@ -275,12 +312,12 @@ def test_corruption_is_logged_with_the_request_path(client, data_paths, caplog):
 
 # ------------------------------------------------------------ route surface
 
-@pytest.mark.parametrize("path", ["/health", "/garments", "/color-palettes", "/color-matches"])
+@pytest.mark.parametrize("path", ["/health", "/stats", "/garments", "/color-palettes", "/color-matches"])
 def test_the_documented_routes_exist(client, path):
     assert path in client.app.openapi()["paths"]
 
 
-@pytest.mark.parametrize("path", ["/health", "/garments", "/color-palettes", "/color-matches"])
+@pytest.mark.parametrize("path", ["/health", "/stats", "/garments", "/color-palettes", "/color-matches"])
 def test_the_routes_are_get_only(client, path, seeded):
     assert client.post(path).status_code == 405
 

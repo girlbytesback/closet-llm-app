@@ -13,7 +13,12 @@ from closetllm.config import (
     project_root,
     web_garment_folder,
 )
-from closetllm.schemas import GarmentsResponse, MatchesResponse, PalettesResponse
+from closetllm.schemas import (
+    GarmentsResponse,
+    MatchesResponse,
+    PalettesResponse,
+    StatsResponse,
+)
 
 import json
 import logging
@@ -24,6 +29,16 @@ app = FastAPI(title="closetLLM")
 
 @app.get("/health")
 def health():
+    # A liveness probe, so it deliberately touches no data: it stays 200 before
+    # anything is extracted and while the JSON on disk is corrupt. Whether the
+    # store has usable content is what /garments and /color-palettes report.
+    return {"ok": True}
+
+@app.get("/stats", response_model=StatsResponse)
+def stats():
+    # Readiness, not liveness: how much is actually in the store. Unlike
+    # /garments an empty store is 200 with zeroes rather than a 404, because
+    # "you have extracted nothing" is the answer here, not a missing resource.
     garments = load_data(garment_hex_colors)
     palettes = load_data(palette_hex_colors)
     return {

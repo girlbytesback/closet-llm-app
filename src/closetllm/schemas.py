@@ -1,5 +1,10 @@
 from pydantic import BaseModel
 
+class StatsResponse(BaseModel):
+    ok: bool
+    garments: int
+    palettes: int
+
 class GarmentsResponse(BaseModel):
     count: int
     garments: dict[str, list[str]]
