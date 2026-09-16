@@ -1,4 +1,13 @@
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import (
+    FastAPI, 
+    HTTPException, 
+    Query, 
+    Request, 
+    File, 
+    UploadFile,
+    HTTPException
+)
+
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from closetllm.color import default_cutoff
@@ -83,6 +92,10 @@ def get_color_matches(
     except FileNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error))
     return build_matches(data, cutoff)
+
+@app.post("/upload-garment", status_code=201)
+def upload_garment(file: UploadFile = File()):
+    return {"filename": file.filename, "content_type": file.content_type}
 
 
 # ── Static assets ──────────────────────────────────────────────────────────
