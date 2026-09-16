@@ -232,7 +232,7 @@ export default function ClosetLLM() {
         fontSize: 11.5, color: "#1c1c1c", boxShadow: "0 1px 0 rgba(255,255,255,.7) inset", zIndex: 5,
       }}>
         <span style={{ fontSize: 13 }}>{""}</span>
-        <span style={{ fontWeight: 700 }}>Game</span>
+        <span style={{ fontWeight: 700 }}>♥ closet LLM ♥</span>
         {["File", "Edit", "View", "History", "Bookmarks", "People", "Window", "Help"].map((m) => (
           <span key={m}>{m}</span>
         ))}
@@ -403,24 +403,6 @@ export default function ClosetLLM() {
         </div>
       )}
 
-      {/* ── dock (pinned to the bottom-center of the screen) ── */}
-      <div style={{
-        position: "absolute", left: "50%", bottom: 22, transform: "translateX(-50%)",
-        display: "flex", alignItems: "center", gap: 12, padding: "8px 16px", borderRadius: 14,
-        background: "linear-gradient(rgba(40,32,38,.86),rgba(20,16,20,.9))",
-        border: "1px solid rgba(255,255,255,.18)", boxShadow: "0 10px 24px rgba(80,40,70,.35)",
-      }}>
-        {[
-          { bg: "linear-gradient(#ffd6ec,#f79ac9)", icon: "♥" },
-          { bg: "linear-gradient(#ffe3f2,#f4a8d2)", icon: "♪" },
-          { bg: "linear-gradient(#fff0f8,#f6b9dc)", icon: "✉" },
-          { bg: "linear-gradient(#ffd6ec,#f79ac9)", icon: "○" },
-          { bg: "linear-gradient(#ffe3f2,#f4a8d2)", icon: "▣" },
-          { bg: "linear-gradient(#fff0f8,#f6b9dc)", icon: "☉" },
-        ].map((d, i) => (
-          <span key={i} style={{ width: 26, height: 26, borderRadius: 6, background: d.bg, display: "grid", placeItems: "center", fontSize: 12, color: "#8a3462" }}>{d.icon}</span>
-        ))}
-      </div>
     </div>
   );
 }
