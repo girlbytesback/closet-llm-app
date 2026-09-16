@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 
 // Font used for the little pixel-style labels.
 const MONO = "Silkscreen, monospace";
@@ -131,9 +131,16 @@ export default function ClosetLLM() {
 
   // ── State: the things that change while you use the app ──
   const [picked, setPicked] = useState(null);        // which palette is chosen
-  const [windows, setWindows] = useState([]);        // open profile pop-ups
   const [main, setMain] = useState({ x: 44, y: 74 }); // position of the big window
-  const zc = useRef(40);                              // stacking counter for pop-ups
+  // the pink profile pop-up: always there, independent of which palette is picked.
+  // Its home spot (668) sits beside the main window, but on a narrower screen
+  // that would push it half off-canvas — the container clips overflow — so it
+  // slides left just enough to stay fully visible.
+  const [popup, setPopup] = useState(() => ({
+    x: Math.max(12, Math.min(668, window.innerWidth - 440)),
+    y: 110,
+    open: true,
+  }));
 
   // Until the fetch resolves, draw a status card and nothing else. These early
   // returns are why every data.* read below is safe — we never reach them unless
@@ -166,43 +173,27 @@ export default function ClosetLLM() {
 
   const pickedPal = PALETTES.find((p) => p.id === picked);
 
-  // Open (or re-focus) a palette's profile window, and mark it picked.
+  // Pick a palette — no longer touches the (now static) pop-up.
   function open(pal) {
     setPicked(pal.id);
-    zc.current += 1;
-    const z = zc.current;
-    setWindows((ws) => {
-      const existing = ws.find((w) => w.id === pal.id);
-      if (existing) return ws.map((w) => (w.id === pal.id ? { ...w, z } : w));
-      const n = ws.length;
-      return [...ws, { id: pal.id, x: 668 + (n % 3) * 24, y: 110 + (n % 4) * 26, z }];
-    });
   }
 
-  function raise(id) {
-    zc.current += 1;
-    const z = zc.current;
-    setWindows((ws) => ws.map((w) => (w.id === id ? { ...w, z } : w)));
+  function closePopup() {
+    setPopup((p) => ({ ...p, open: false }));
   }
 
-  function closeWin(id) {
-    setWindows((ws) => ws.filter((w) => w.id !== id));
-  }
-
-  // Dragging: works for the big window ("main") and each pop-up.
+  // Dragging: works for the big window ("main") and the pop-up.
   // Uses pointer events, so it works with a mouse OR a finger.
   function startDrag(target, e) {
     e.preventDefault();
-    const base = target === "main" ? main : windows.find((w) => w.id === target);
-    if (!base) return;
-    if (target !== "main") raise(target);
+    const base = target === "main" ? main : popup;
     const startX = e.clientX, startY = e.clientY;
     const baseX = base.x, baseY = base.y;
     const move = (ev) => {
       const x = Math.max(0, baseX + (ev.clientX - startX));
       const y = Math.max(26, baseY + (ev.clientY - startY));
       if (target === "main") setMain({ x, y });
-      else setWindows((ws) => ws.map((w) => (w.id === target ? { ...w, x, y } : w)));
+      else setPopup((p) => ({ ...p, x, y }));
     };
     const up = () => {
       window.removeEventListener("pointermove", move);
@@ -386,64 +377,31 @@ export default function ClosetLLM() {
         </div>
       </div>
 
-      {/* ── profile pop-up windows ── */}
-      {windows.map((w) => {
-        const pal = PALETTES.find((p) => p.id === w.id);
-        if (!pal) return null;
-        return (
-          <div key={w.id} style={{
-            position: "absolute", left: w.x, top: w.y, width: 312, zIndex: w.z,
-            borderRadius: 7, background: "linear-gradient(#ffe6f4,#ffd0e9)", border: "1px solid #d3699f",
-            boxShadow: "0 12px 28px rgba(150,60,110,.3)", animation: "pop .16s ease-out",
-            transform: `scale(${PROFILE_SCALE})`, transformOrigin: "top left",
+      {/* ── profile pop-up: static, not tied to picking a palette ── */}
+      {popup.open && (
+        <div style={{
+          position: "absolute", left: popup.x, top: popup.y, width: 312, zIndex: 45,
+          borderRadius: 7, background: "linear-gradient(#ffe6f4,#ffd0e9)", border: "1px solid #d3699f",
+          boxShadow: "0 12px 28px rgba(150,60,110,.3)",
+          transform: `scale(${PROFILE_SCALE})`, transformOrigin: "top left",
+        }}>
+          {/* pop-up title bar (drag here) */}
+          <div onPointerDown={(e) => startDrag("popup", e)} style={{
+            height: 26, display: "flex", alignItems: "center", gap: 6, padding: "0 7px",
+            borderRadius: "6px 6px 0 0", background: "linear-gradient(#ffa8d6,#f279b8)",
+            borderBottom: "1px solid #d05e97", cursor: "grab", touchAction: "none",
           }}>
-            {/* pop-up title bar (drag here) */}
-            <div onPointerDown={(e) => startDrag(w.id, e)} style={{
-              height: 26, display: "flex", alignItems: "center", gap: 6, padding: "0 7px",
-              borderRadius: "6px 6px 0 0", background: "linear-gradient(#ffa8d6,#f279b8)",
-              borderBottom: "1px solid #d05e97", cursor: "grab", touchAction: "none",
-            }}>
-              <span style={{ fontSize: 11, color: "#7d2652" }}>{"♥"}</span>
-              <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: ".06em", color: "#6d1f47" }}>{pal.name}.PROFILE</span>
-              <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
-                <span style={{ width: 14, height: 13, border: "1px solid #c95d93", borderRadius: 2, background: "#ffd3ea", display: "grid", placeItems: "center", fontSize: 8, color: "#8a3462" }}>{"–"}</span>
-                <span style={{ width: 14, height: 13, border: "1px solid #c95d93", borderRadius: 2, background: "#ffd3ea", display: "grid", placeItems: "center", fontSize: 8, color: "#8a3462" }}>{"□"}</span>
-                <span onClick={(e) => { e.stopPropagation(); closeWin(w.id); }} onPointerDown={(e) => e.stopPropagation()} style={{ width: 14, height: 13, border: "1px solid #c95d93", borderRadius: 2, background: "#ffbcdd", display: "grid", placeItems: "center", fontSize: 9, color: "#7d1f45", cursor: "pointer" }}>{"×"}</span>
-              </span>
-            </div>
-
-            {/* pop-up body */}
-            <div style={{ padding: "11px 12px 13px", display: "grid", gap: 11 }}>
-              <div style={{ display: "flex", gap: 11 }}>
-                <img src={pal.img} alt={pal.name} draggable={false} style={{ width: 104, height: 104, flex: "none", objectFit: "cover", border: "1px solid #e79cc4", background: "#fff", borderRadius: 2, display: "block" }} />
-                <div style={{ display: "grid", alignContent: "start", gap: 8 }}>
-                  <div style={{ fontFamily: MONO, fontSize: 11, color: "#5f1a3e", letterSpacing: ".04em", lineHeight: 1.3 }}>{pal.name}</div>
-                  <div style={{ fontFamily: MONO, fontSize: 8, color: "#c0468f", letterSpacing: ".06em" }}>{pal.colors.length} MAIN COLORS</div>
-                  {pal.colors.map((hex) => <Swatch key={hex} hex={hex} />)}
-                </div>
-              </div>
-
-              {/* the closet, scored against this palette */}
-              <div className="stage" style={{ borderTop: "1px solid #f0b8d8", paddingTop: 9, display: "grid", gap: 10, maxHeight: 300, overflowY: "auto", paddingRight: 4 }}>
-                {hitCount(pal) === 0 ? (
-                  <span style={{ fontFamily: MONO, fontSize: 8, color: "#b07b9a", letterSpacing: ".05em" }}>
-                    {`NOTHING UNDER ${data.meta.cutoff}`}
-                  </span>
-                ) : (
-                  pal.groups.map((group) => <MatchRow key={group.hex} group={group} size={78} />)
-                )}
-              </div>
-
-              {/* one button, full width — clicking the palette already selects it */}
-              <span className="close-btn" onClick={() => closeWin(w.id)} style={{
-                display: "block", textAlign: "center", padding: "7px 0", fontFamily: MONO, fontSize: 8.5,
-                letterSpacing: ".06em", color: "#8a3462", background: "linear-gradient(#fff,#ffdcef)",
-                border: "1px solid #e79cc4", borderRadius: 3, cursor: "pointer",
-              }}>CLOSE</span>
-            </div>
+            <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
+              <span style={{ width: 14, height: 13, border: "1px solid #c95d93", borderRadius: 2, background: "#ffd3ea", display: "grid", placeItems: "center", fontSize: 8, color: "#8a3462" }}>{"–"}</span>
+              <span style={{ width: 14, height: 13, border: "1px solid #c95d93", borderRadius: 2, background: "#ffd3ea", display: "grid", placeItems: "center", fontSize: 8, color: "#8a3462" }}>{"□"}</span>
+              <span onClick={(e) => { e.stopPropagation(); closePopup(); }} onPointerDown={(e) => e.stopPropagation()} style={{ width: 14, height: 13, border: "1px solid #c95d93", borderRadius: 2, background: "#ffbcdd", display: "grid", placeItems: "center", fontSize: 9, color: "#7d1f45", cursor: "pointer" }}>{"×"}</span>
+            </span>
           </div>
-        );
-      })}
+
+          {/* pop-up body — intentionally empty, reserved for future content */}
+          <div style={{ height: 90 }} />
+        </div>
+      )}
 
       {/* ── dock (pinned to the bottom-center of the screen) ── */}
       <div style={{
