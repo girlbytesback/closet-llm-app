@@ -132,14 +132,23 @@ export default function ClosetLLM() {
   // ── State: the things that change while you use the app ──
   const [picked, setPicked] = useState(null);        // which palette is chosen
   const [main, setMain] = useState({ x: 44, y: 74 }); // position of the big window
-  // the pink profile pop-up: always there, independent of which palette is picked.
+  const [menu, setMenu] = useState(null);             // which menu-bar menu is open ("File" or null)
+  // the pink profile pop-up: starts closed, opens when the desktop folder is
+  // clicked, and is independent of which palette is picked.
   // Its home spot (668) sits beside the main window, but on a narrower screen
   // that would push it half off-canvas — the container clips overflow — so it
   // slides left just enough to stay fully visible.
   const [popup, setPopup] = useState(() => ({
     x: Math.max(12, Math.min(668, window.innerWidth - 440)),
     y: 110,
-    open: true,
+    open: false,
+  }));
+  // the mauve pop-up: same behaviour as the pink one, opened by the round
+  // desktop icon. Sits lower so the two don't land on top of each other.
+  const [mauve, setMauve] = useState(() => ({
+    x: Math.max(12, Math.min(668, window.innerWidth - 440)),
+    y: 330,
+    open: false,
   }));
 
   // Until the fetch resolves, draw a status card and nothing else. These early
@@ -178,22 +187,42 @@ export default function ClosetLLM() {
     setPicked(pal.id);
   }
 
+  function openPopup() {
+    setPopup((p) => ({ ...p, open: true }));
+  }
+
   function closePopup() {
     setPopup((p) => ({ ...p, open: false }));
   }
 
-  // Dragging: works for the big window ("main") and the pop-up.
+  function openMauve() {
+    setMauve((m) => ({ ...m, open: true }));
+  }
+
+  function closeMauve() {
+    setMauve((m) => ({ ...m, open: false }));
+  }
+
+  // One lookup table instead of if/else chains: each draggable window says
+  // where it currently is and how to move it. Adding a fourth window later
+  // means adding one line here, not editing startDrag.
+  const DRAGGABLE = {
+    main:  { at: main,  moveTo: (xy) => setMain(xy) },
+    popup: { at: popup, moveTo: (xy) => setPopup((p) => ({ ...p, ...xy })) },
+    mauve: { at: mauve, moveTo: (xy) => setMauve((m) => ({ ...m, ...xy })) },
+  };
+
+  // Dragging: works for the big window and both pop-ups.
   // Uses pointer events, so it works with a mouse OR a finger.
   function startDrag(target, e) {
     e.preventDefault();
-    const base = target === "main" ? main : popup;
+    const { at, moveTo } = DRAGGABLE[target];
     const startX = e.clientX, startY = e.clientY;
-    const baseX = base.x, baseY = base.y;
+    const baseX = at.x, baseY = at.y;
     const move = (ev) => {
       const x = Math.max(0, baseX + (ev.clientX - startX));
       const y = Math.max(26, baseY + (ev.clientY - startY));
-      if (target === "main") setMain({ x, y });
-      else setPopup((p) => ({ ...p, x, y }));
+      moveTo({ x, y });
     };
     const up = () => {
       window.removeEventListener("pointermove", move);
@@ -218,23 +247,68 @@ export default function ClosetLLM() {
         @keyframes blink {0%,60%{opacity:1}61%,100%{opacity:.25}}
         @keyframes pop {from{transform:scale(${PROFILE_SCALE * 0.94});opacity:0}to{transform:scale(${PROFILE_SCALE});opacity:1}}
         .close-btn:hover{background:linear-gradient(#fff,#ffcde8)}
+        .menu-item{display:flex;align-items:center;gap:6px;padding:3px 18px 3px 8px;cursor:default;white-space:nowrap}
+        .menu-item:hover{background:#3d7dd8;color:#fff}
+        .menu-title:hover{background:rgba(0,0,0,.07);border-radius:3px}
         .pal-list::-webkit-scrollbar{width:8px}
         .pal-list::-webkit-scrollbar-thumb{background:#e79cc4;border-radius:4px}
         .stage::-webkit-scrollbar{width:8px}
         .stage::-webkit-scrollbar-thumb{background:#e79cc4;border-radius:4px}
       `}</style>
 
+      {/* Click-catcher: any click outside the open menu closes it. Rendered
+          only while a menu is open, and sits under the menu bar in z-order. */}
+      {menu && (
+        <div onClick={() => setMenu(null)} style={{ position: "fixed", inset: 0, zIndex: 900 }} />
+      )}
+
       {/* ── top menu bar (spans the full width of the screen) ── */}
       <div style={{
         position: "absolute", inset: "0 0 auto 0", height: 26, display: "flex",
         alignItems: "center", gap: 18, padding: "0 12px",
         background: "linear-gradient(#fdfdfd,#e6e6e6)", borderBottom: "1px solid #b9b9b9",
-        fontSize: 11.5, color: "#1c1c1c", boxShadow: "0 1px 0 rgba(255,255,255,.7) inset", zIndex: 5,
+        fontSize: 11.5, color: "#1c1c1c", boxShadow: "0 1px 0 rgba(255,255,255,.7) inset",
+        // lifted above the click-catcher while a menu is open, so the dropdown
+        // (a child of this bar) isn't covered by it
+        zIndex: menu ? 901 : 5,
       }}>
-        <span style={{ fontSize: 13 }}>{""}</span>
+        <span style={{ fontSize: 13 }}>{""}</span>
         <span style={{ fontWeight: 700 }}>♥ closet LLM ♥</span>
         {["File", "Edit", "View", "History", "Bookmarks", "People", "Window", "Help"].map((m) => (
-          <span key={m}>{m}</span>
+          m === "File" ? (
+            <span key={m} style={{ position: "relative" }}>
+              <span
+                className="menu-title"
+                onClick={() => setMenu((openMenu) => (openMenu === "File" ? null : "File"))}
+                style={{
+                  padding: "2px 6px", borderRadius: 3, cursor: "default",
+                  background: menu === "File" ? "#3d7dd8" : "transparent",
+                  color: menu === "File" ? "#fff" : "inherit",
+                }}
+              >{m}</span>
+
+              {menu === "File" && (
+                <div style={{
+                  position: "absolute", top: 20, left: 0, minWidth: 176, padding: "4px 0",
+                  background: "rgba(252,252,252,.98)", border: "1px solid #b0b0b0", borderRadius: 5,
+                  boxShadow: "0 8px 20px rgba(0,0,0,.24)", fontSize: 11.5, color: "#1c1c1c",
+                }}>
+                  {[
+                    { label: "upload clothing", isOpen: popup.open, show: openPopup },
+                    { label: "my clothing", isOpen: mauve.open, show: openMauve },
+                  ].map((item) => (
+                    <div key={item.label} className="menu-item" onClick={() => { item.show(); setMenu(null); }}>
+                      {/* checkmark column: marks a window already on screen */}
+                      <span style={{ width: 10, textAlign: "center" }}>{item.isOpen ? "✓" : ""}</span>
+                      <span>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </span>
+          ) : (
+            <span key={m}>{m}</span>
+          )
         ))}
         <span style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 10, letterSpacing: ".06em", color: "#6a6a6a" }}>11:11 PM</span>
       </div>
@@ -242,10 +316,9 @@ export default function ClosetLLM() {
       {/* ── desktop icons (pinned to the top-right of the screen) ── */}
       <div style={{ position: "absolute", top: 60, right: 44, display: "grid", gap: 34, justifyItems: "center", width: 150 }}>
         {[
-          { top: "linear-gradient(#ffd0ea,#f79ccb)", tab: "#ffd6ee" },
-          { top: "linear-gradient(#ffdcef,#f2a9cf)", tab: "#ffe2f3" },
+          { label: "upload clothing", top: "linear-gradient(#ffd0ea,#f79ccb)", tab: "#ffd6ee" },
         ].map((f) => (
-          <div key={f.label} style={{ display: "grid", justifyItems: "center", gap: 7 }}>
+          <div key={f.label} onClick={openPopup} style={{ display: "grid", justifyItems: "center", gap: 7, cursor: "pointer" }}>
             <div style={{
               width: 76, height: 60, borderRadius: "4px 10px 6px 6px", background: f.top,
               border: "1px solid #d9679f", boxShadow: "2px 3px 0 rgba(160,60,110,.25)",
@@ -257,7 +330,7 @@ export default function ClosetLLM() {
             <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: ".08em", color: "#7a3557" }}>{f.label}</span>
           </div>
         ))}
-        <div style={{ display: "grid", justifyItems: "center", gap: 7 }}>
+        <div onClick={openMauve} style={{ display: "grid", justifyItems: "center", gap: 7, cursor: "pointer" }}>
           <div style={{
             width: 70, height: 70, borderRadius: "50%",
             background: "radial-gradient(circle at 34% 30%,#fff 0 6%,#f6b9d6 24%,#d1728f 74%,#b45c7c 100%)",
@@ -265,6 +338,7 @@ export default function ClosetLLM() {
           }}>
             <span style={{ color: "#8e3f60", fontSize: 18 }}>{"♥"}</span>
           </div>
+          <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: ".08em", color: "#7a3557" }}>my clothing</span>
         </div>
       </div>
 
@@ -399,6 +473,32 @@ export default function ClosetLLM() {
           </div>
 
           {/* pop-up body — intentionally empty, reserved for future content */}
+          <div style={{ height: 90 }} />
+        </div>
+      )}
+
+      {/* ── mauve pop-up: opened by the round desktop icon ── */}
+      {mauve.open && (
+        <div style={{
+          position: "absolute", left: mauve.x, top: mauve.y, width: 312, zIndex: 46,
+          borderRadius: 7, background: "linear-gradient(#f7dcea,#e8c1d9)", border: "1px solid #a76e8f",
+          boxShadow: "0 12px 28px rgba(120,60,100,.3)",
+          transform: `scale(${PROFILE_SCALE})`, transformOrigin: "top left",
+        }}>
+          {/* title bar (drag here) */}
+          <div onPointerDown={(e) => startDrag("mauve", e)} style={{
+            height: 26, display: "flex", alignItems: "center", gap: 6, padding: "0 7px",
+            borderRadius: "6px 6px 0 0", background: "linear-gradient(#ddaac8,#c78cb0)",
+            borderBottom: "1px solid #a76e8f", cursor: "grab", touchAction: "none",
+          }}>
+            <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
+              <span style={{ width: 14, height: 13, border: "1px solid #a0688a", borderRadius: 2, background: "#eed2e1", display: "grid", placeItems: "center", fontSize: 8, color: "#6d3352" }}>{"–"}</span>
+              <span style={{ width: 14, height: 13, border: "1px solid #a0688a", borderRadius: 2, background: "#eed2e1", display: "grid", placeItems: "center", fontSize: 8, color: "#6d3352" }}>{"□"}</span>
+              <span onClick={(e) => { e.stopPropagation(); closeMauve(); }} onPointerDown={(e) => e.stopPropagation()} style={{ width: 14, height: 13, border: "1px solid #a0688a", borderRadius: 2, background: "#e2bcd4", display: "grid", placeItems: "center", fontSize: 9, color: "#57243d", cursor: "pointer" }}>{"×"}</span>
+            </span>
+          </div>
+
+          {/* body — intentionally empty, reserved for future content */}
           <div style={{ height: 90 }} />
         </div>
       )}
