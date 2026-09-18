@@ -424,37 +424,11 @@ export default function ClosetLLM() {
           <span style={{ width: 14, height: 11, borderRadius: 3, border: "1px solid #dfa4be", background: "#fdeef4" }} />
         </div>
 
-        {/* finder-style toolbar */}
-        <div style={{
-          height: 52, display: "flex", alignItems: "flex-end", gap: narrow ? 14 : 22, padding: narrow ? "4px 10px 5px" : "4px 14px 5px",
-          background: "linear-gradient(#fbe4ee,#f6d0e0)", borderBottom: "1px solid #e0a6c0",
-        }}>
-          <div style={{ display: "grid", justifyItems: "center", gap: 1, color: "#6b3f52" }}>
-            <span style={{ width: 34, height: 22, borderRadius: 11, background: "linear-gradient(#fffafc,#f7d9e6)", border: "1px solid #dfa4be", display: "grid", placeItems: "center", fontSize: 12 }}>{"←"}</span>
-            <span style={{ fontSize: 9 }}>Back</span>
-          </div>
-          <div style={{ display: "grid", justifyItems: "center", gap: 1, color: "#6b3f52" }}>
-            <span style={{ display: "flex", gap: 2, padding: 4, borderRadius: 5, background: "linear-gradient(#fffafc,#f7d9e6)", border: "1px solid #dfa4be" }}>
-              <span style={{ width: 8, height: 12, background: "#b4738f" }} />
-              <span style={{ width: 8, height: 12, background: "#edc9da" }} />
-              <span style={{ width: 8, height: 12, background: "#edc9da" }} />
-            </span>
-            <span style={{ fontSize: 9 }}>View</span>
-          </div>
-          {!narrow && (
-          <div style={{ display: "flex", gap: 20, marginLeft: 6 }}>
-            <div style={{ display: "grid", justifyItems: "center", gap: 2, color: "#6b3f52" }}><span style={{ width: 24, height: 19, borderRadius: 3, background: "linear-gradient(#c9d6e6,#8fa4bd)", border: "1px solid #6c7f96" }} /><span style={{ fontSize: 9 }}>Computer</span></div>
-            <div style={{ display: "grid", justifyItems: "center", gap: 2, color: "#6b3f52" }}><span style={{ width: 0, height: 0, borderLeft: "12px solid transparent", borderRight: "12px solid transparent", borderBottom: "12px solid #b98a5e" }} /><span style={{ fontSize: 9 }}>Home</span></div>
-            <div style={{ display: "grid", justifyItems: "center", gap: 2, color: "#6b3f52" }}><span style={{ fontSize: 17, lineHeight: "14px", color: "#d8395f" }}>{"♥"}</span><span style={{ fontSize: 9 }}>Favorites</span></div>
-            <div style={{ display: "grid", justifyItems: "center", gap: 2, color: "#6b3f52" }}><span style={{ fontFamily: MONO, fontSize: 15, lineHeight: "15px", color: "#6b3f52" }}>A</span><span style={{ fontSize: 9 }}>Applications</span></div>
-          </div>
-          )}
-        </div>
-
-        {/* body: left list of palettes + center stage */}
+        {/* body: left list of palettes + center stage. 30px is the title bar,
+            the only chrome above it. */}
         <div style={{
           display: "flex", flexDirection: narrow ? "column" : "row",
-          height: "calc(100% - 82px)", padding: 12, boxSizing: "border-box",
+          height: "calc(100% - 30px)", padding: 12, boxSizing: "border-box",
         }}>
           {/* The palette photos, scrolling along whichever axis they're stacked
               on: a column down the left normally, a strip across the top once
