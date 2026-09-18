@@ -4,6 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>closetLLM — Pick your palette</title>
+    <style>
+      /* The desktop sizes itself off #root, so #root has to be a real height —
+         percentages need one on every ancestor. dvh, where it's supported, is
+         the height minus whatever mobile browser chrome is currently on screen,
+         so the wallpaper doesn't leave a gap when the address bar slides away. */
+      html, body, #root { margin: 0; height: 100%; }
+      @supports (height: 100dvh) { html, body, #root { height: 100dvh; } }
+    </style>
   </head>
   <body style="margin:0;background:#111">
     <div id="root"></div>

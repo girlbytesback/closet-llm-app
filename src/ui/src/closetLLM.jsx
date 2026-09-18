@@ -1,4 +1,22 @@
 import React, { useState, useEffect } from "react";
+import heartButton from "./assets/icon-heart-button.png";
+import flowerButton from "./assets/icon-flower-button.png";
+
+// Desktop wallpaper: cream, with black dots on a staggered lattice. Measured off
+// the reference photo (cream #f6f3e0, ~5px dots, one every 34px on the diagonal)
+// and redrawn in CSS rather than tiled from the file. The photo is 736×414 and
+// the lattice repeats every 68px, which divides evenly into neither side — so
+// tiling it would seam, and stretching it to fill a screen would smudge 5px dots.
+// Two radial-gradient layers offset by half a cell give the same pattern, crisp
+// at any size. Spread it with `...WALLPAPER`; it's several properties, not one.
+const WALLPAPER = {
+  backgroundColor: "#f6f3e0",
+  backgroundImage:
+    "radial-gradient(#191816 2.6px, transparent 2.7px), radial-gradient(#191816 2.6px, transparent 2.7px)",
+  backgroundSize: "68px 68px",
+  // the reference photo's own offsets, so no dot is sliced in half at the edges
+  backgroundPosition: "10px 1px, 44px 35px",
+};
 
 // Font used for the little pixel-style labels.
 const MONO = "Silkscreen, monospace";
@@ -33,16 +51,67 @@ const NAMES = {
 // which sorting on the filename wouldn't.
 const number = (file) => Number(file.match(/\d+/)?.[0] ?? 0);
 
-// How much bigger the profile pop-ups draw than they measure.
-const PROFILE_SCALE = 1.3;
+// ── Layout geometry ─────────────────────────────────────────────────────────
+// Every size here is an ideal, not a promise: each one gets measured against the
+// live viewport below, so the same desktop works on a phone and on a 27" monitor.
+const MENU_BAR = 26;                 // the top bar owns this strip; windows start under it
+const GUTTER = 16;                   // breathing room between a window and the screen edge
+const MAIN_W = 600, MAIN_H = 800;    // the main window at full size
+const MAIN_MIN = 280;                // it stops shrinking here; below this the screen wins
+const POPUP_W = 312, POPUP_H = 116;  // a pop-up as measured, before PROFILE_SCALE
+const PROFILE_SCALE = 1.3;           // how much bigger the pop-ups draw than they measure
+// Under this window width, a 150px sidebar leaves the stage too cramped to show
+// a garment grid — so the palette list flips from a left column to a top strip.
+const NARROW = 460;
+// Clear space the desktop icons need to the right of the main window.
+const ICON_COL = 200;
+// Both desktop icons draw in the same square box, so their labels line up even
+// though the heart is wider than it is tall and the flower is round.
+const ICON_SIZE = 72;
+
+const clamp = (n, lo, hi) => Math.min(Math.max(n, lo), Math.max(lo, hi));
+
+// One resize listener for the whole app. Every responsive decision below reads
+// from this, so no component has to register its own.
+function useViewport() {
+  const [vp, setVp] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
+  useEffect(() => {
+    const onResize = () => setVp({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return vp;
+}
+
+// The main window shrinks to fit a small screen but never grows past its design
+// size — a huge monitor shouldn't mean one absurdly large Finder window.
+const mainSize = (vp) => ({
+  w: clamp(vp.w - GUTTER * 2, MAIN_MIN, MAIN_W),
+  h: clamp(vp.h - MENU_BAR - GUTTER * 2, 240, MAIN_H),
+});
+
+// Dead centre of the usable area (everything below the menu bar). Where the main
+// window opens on a first visit, and where it stays until you drag it.
+const centre = (vp, size) => ({
+  x: Math.max(0, (vp.w - size.w) / 2),
+  y: MENU_BAR + Math.max(0, (vp.h - MENU_BAR - size.h) / 2),
+});
+
+// Keeps a window fully on screen. The desktop clips overflow, so without this a
+// drag — or someone shrinking their browser — could strand a window off-canvas
+// with no title bar left to grab it by.
+const onScreen = (at, size, vp) => ({
+  x: clamp(at.x, 0, vp.w - size.w),
+  y: clamp(at.y, MENU_BAR, vp.h - size.h),
+});
 
 // Shown while the closet is loading, or if the API can't be reached. Borrows the
-// same pink wallpaper + pixel font as the desktop so the wait doesn't look broken.
+// same dotted wallpaper + pixel font as the desktop so the wait doesn't look broken.
 function StatusScreen({ text }) {
   return (
     <div style={{
-      width: "100%", height: "100vh", display: "grid", placeItems: "center",
-      background: "radial-gradient(120% 90% at 78% 12%, #ffc5e6 0%, #f7b8dd 26%, #e9c3d8 52%, #d9d3cf 74%, #cfd6cc 100%)",
+      width: "100%", height: "100%", display: "grid", placeItems: "center",
+      ...WALLPAPER,
       fontFamily: MONO, fontSize: 12, letterSpacing: ".08em", color: "#9a5b7c",
     }}>
       {text}
@@ -130,32 +199,51 @@ export default function ClosetLLM() {
   }, []);
 
   // ── State: the things that change while you use the app ──
-  const [picked, setPicked] = useState(null);        // which palette is chosen
-  const [main, setMain] = useState({ x: 44, y: 74 }); // position of the big window
-  const [menu, setMenu] = useState(null);             // which menu-bar menu is open ("File" or null)
-  // the pink profile pop-up: starts closed, opens when the desktop folder is
-  // clicked, and is independent of which palette is picked.
-  // Its home spot (668) sits beside the main window, but on a narrower screen
-  // that would push it half off-canvas — the container clips overflow — so it
-  // slides left just enough to stay fully visible.
-  const [popup, setPopup] = useState(() => ({
-    x: Math.max(12, Math.min(668, window.innerWidth - 440)),
-    y: 110,
-    open: false,
-  }));
-  // the mauve pop-up: same behaviour as the pink one, opened by the round
-  // desktop icon. Sits lower so the two don't land on top of each other.
-  const [mauve, setMauve] = useState(() => ({
-    x: Math.max(12, Math.min(668, window.innerWidth - 440)),
-    y: 330,
-    open: false,
-  }));
+  const vp = useViewport();                     // live screen size; drives all the sizing below
+  const [picked, setPicked] = useState(null);   // which palette is chosen
+  const [menu, setMenu] = useState(null);       // which menu-bar menu is open ("File" or null)
+  const [popupOpen, setPopupOpen] = useState(false); // pink pop-up, opened by the folder icon
+  const [mauveOpen, setMauveOpen] = useState(false); // mauve pop-up, opened by the round icon
+  // Where each window sits. `null` means "you haven't moved this one yet", so it
+  // keeps whatever spot the current viewport works out — the main window dead
+  // centre, the pop-ups tucked beside it — and re-centres itself on every resize.
+  // The first drag writes a real {x,y}; from then on the window stays where you
+  // put it, pulled back into view only if the screen gets too small to hold it.
+  const [mainAt, setMainAt] = useState(null);
+  const [popupAt, setPopupAt] = useState(null);
+  const [mauveAt, setMauveAt] = useState(null);
 
   // Until the fetch resolves, draw a status card and nothing else. These early
   // returns are why every data.* read below is safe — we never reach them unless
   // data exists.
   if (error) return <StatusScreen text={`COULD NOT LOAD: ${error}`} />;
   if (!data) return <StatusScreen text="LOADING YOUR CLOSET…" />;
+
+  // ── Geometry: all derived from the live viewport, so a resize just re-runs it ──
+  const size = mainSize(vp);
+  const main = mainAt ? onScreen(mainAt, size, vp) : centre(vp, size);
+  // Inside the window: palette list on the left, or across the top when tight.
+  const narrow = size.w < NARROW;
+  // The menu bar drops its decorative menus before they'd wrap onto two lines.
+  const tightBar = vp.w < 520;
+  // A pop-up's 1.3× blow-up would hang off a phone screen, so the scale eases
+  // back until the painted width fits. transformOrigin is top-left, so the
+  // painted box is what has to be positioned — hence popupSize, not POPUP_W.
+  const scale = clamp((vp.w - GUTTER * 2) / POPUP_W, 0.8, PROFILE_SCALE);
+  const popupSize = { w: POPUP_W * scale, h: POPUP_H * scale };
+  // A pop-up's parking spot: beside the main window when the screen is wide
+  // enough for both, otherwise centred over it, dropped by `offset` so the two
+  // pop-ups never land on the same pixel.
+  const parked = (offset) => {
+    const beside = main.x + size.w + GUTTER;
+    const room = beside + popupSize.w + GUTTER <= vp.w;
+    return onScreen({ x: room ? beside : (vp.w - popupSize.w) / 2, y: main.y + offset }, popupSize, vp);
+  };
+  const popup = popupAt ? onScreen(popupAt, popupSize, vp) : parked(36);
+  const mauve = mauveAt ? onScreen(mauveAt, popupSize, vp) : parked(36 + popupSize.h + GUTTER);
+  // The icons live to the right of the main window. Once it's centred on a
+  // narrow screen there's nowhere to put them — the File menu is the way in.
+  const showIcons = vp.w - (main.x + size.w) >= ICON_COL;
 
   // matches.json is keyed by filename and points at garments by name. The UI
   // wants a sorted list of ready-to-draw objects, so that join happens once here
@@ -187,42 +275,25 @@ export default function ClosetLLM() {
     setPicked(pal.id);
   }
 
-  function openPopup() {
-    setPopup((p) => ({ ...p, open: true }));
-  }
-
-  function closePopup() {
-    setPopup((p) => ({ ...p, open: false }));
-  }
-
-  function openMauve() {
-    setMauve((m) => ({ ...m, open: true }));
-  }
-
-  function closeMauve() {
-    setMauve((m) => ({ ...m, open: false }));
-  }
-
-  // One lookup table instead of if/else chains: each draggable window says
-  // where it currently is and how to move it. Adding a fourth window later
-  // means adding one line here, not editing startDrag.
+  // One lookup table instead of if/else chains: each draggable window says where
+  // it currently is, how big it draws, and how to move it. Adding a fourth window
+  // later means adding one line here, not editing startDrag.
   const DRAGGABLE = {
-    main:  { at: main,  moveTo: (xy) => setMain(xy) },
-    popup: { at: popup, moveTo: (xy) => setPopup((p) => ({ ...p, ...xy })) },
-    mauve: { at: mauve, moveTo: (xy) => setMauve((m) => ({ ...m, ...xy })) },
+    main:  { at: main,  box: size,      moveTo: setMainAt },
+    popup: { at: popup, box: popupSize, moveTo: setPopupAt },
+    mauve: { at: mauve, box: popupSize, moveTo: setMauveAt },
   };
 
   // Dragging: works for the big window and both pop-ups.
   // Uses pointer events, so it works with a mouse OR a finger.
   function startDrag(target, e) {
     e.preventDefault();
-    const { at, moveTo } = DRAGGABLE[target];
+    const { at, box, moveTo } = DRAGGABLE[target];
     const startX = e.clientX, startY = e.clientY;
     const baseX = at.x, baseY = at.y;
     const move = (ev) => {
-      const x = Math.max(0, baseX + (ev.clientX - startX));
-      const y = Math.max(26, baseY + (ev.clientY - startY));
-      moveTo({ x, y });
+      const to = { x: baseX + (ev.clientX - startX), y: baseY + (ev.clientY - startY) };
+      moveTo(onScreen(to, box, vp));
     };
     const up = () => {
       window.removeEventListener("pointermove", move);
@@ -233,24 +304,22 @@ export default function ClosetLLM() {
   }
 
   return (
-    // The whole desktop = the whole screen. The pink wallpaper fills every
+    // The whole desktop = the whole screen. The plaid wallpaper fills every
     // pixel, and the windows float on top of it. No bars, any screen size.
     <div style={{
-      position: "relative", width: "100%", height: "100vh", overflow: "hidden",
-      background: "radial-gradient(120% 90% at 78% 12%, #ffc5e6 0%, #f7b8dd 26%, #e9c3d8 52%, #d9d3cf 74%, #cfd6cc 100%)",
+      position: "relative", width: "100%", height: "100%", overflow: "hidden",
+      ...WALLPAPER,
       fontFamily: "Verdana, Geneva, sans-serif", userSelect: "none",
     }}>
       {/* fonts + tiny animations + one hover rule */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap');
-        html, body, #root { margin: 0; height: 100%; }
         @keyframes blink {0%,60%{opacity:1}61%,100%{opacity:.25}}
-        @keyframes pop {from{transform:scale(${PROFILE_SCALE * 0.94});opacity:0}to{transform:scale(${PROFILE_SCALE});opacity:1}}
         .close-btn:hover{background:linear-gradient(#fff,#ffcde8)}
         .menu-item{display:flex;align-items:center;gap:6px;padding:3px 18px 3px 8px;cursor:default;white-space:nowrap}
         .menu-item:hover{background:#3d7dd8;color:#fff}
         .menu-title:hover{background:rgba(0,0,0,.07);border-radius:3px}
-        .pal-list::-webkit-scrollbar{width:8px}
+        .pal-list::-webkit-scrollbar{width:8px;height:8px}
         .pal-list::-webkit-scrollbar-thumb{background:#e79cc4;border-radius:4px}
         .stage::-webkit-scrollbar{width:8px}
         .stage::-webkit-scrollbar-thumb{background:#e79cc4;border-radius:4px}
@@ -264,8 +333,8 @@ export default function ClosetLLM() {
 
       {/* ── top menu bar (spans the full width of the screen) ── */}
       <div style={{
-        position: "absolute", inset: "0 0 auto 0", height: 26, display: "flex",
-        alignItems: "center", gap: 18, padding: "0 12px",
+        position: "absolute", inset: "0 0 auto 0", height: MENU_BAR, display: "flex",
+        alignItems: "center", gap: tightBar ? 10 : 18, padding: tightBar ? "0 8px" : "0 12px",
         background: "linear-gradient(#fdfdfd,#e6e6e6)", borderBottom: "1px solid #b9b9b9",
         fontSize: 11.5, color: "#1c1c1c", boxShadow: "0 1px 0 rgba(255,255,255,.7) inset",
         // lifted above the click-catcher while a menu is open, so the dropdown
@@ -274,7 +343,7 @@ export default function ClosetLLM() {
       }}>
         <span style={{ fontSize: 13 }}>{""}</span>
         <span style={{ fontWeight: 700 }}>♥ closet LLM ♥</span>
-        {["File", "Edit", "View", "History", "Bookmarks", "People", "Window", "Help"].map((m) => (
+        {(tightBar ? ["File"] : ["File", "Edit", "View", "History"]).map((m) => (
           m === "File" ? (
             <span key={m} style={{ position: "relative" }}>
               <span
@@ -294,8 +363,8 @@ export default function ClosetLLM() {
                   boxShadow: "0 8px 20px rgba(0,0,0,.24)", fontSize: 11.5, color: "#1c1c1c",
                 }}>
                   {[
-                    { label: "upload clothing", isOpen: popup.open, show: openPopup },
-                    { label: "my clothing", isOpen: mauve.open, show: openMauve },
+                    { label: "upload clothing", isOpen: popupOpen, show: () => setPopupOpen(true) },
+                    { label: "my clothing", isOpen: mauveOpen, show: () => setMauveOpen(true) },
                   ].map((item) => (
                     <div key={item.label} className="menu-item" onClick={() => { item.show(); setMenu(null); }}>
                       {/* checkmark column: marks a window already on screen */}
@@ -313,94 +382,100 @@ export default function ClosetLLM() {
         <span style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 10, letterSpacing: ".06em", color: "#6a6a6a" }}>11:11 PM</span>
       </div>
 
-      {/* ── desktop icons (pinned to the top-right of the screen) ── */}
+      {/* ── desktop icons ── They sit to the right of the main window, so on a
+          screen too narrow to fit both they'd end up underneath it. Hidden in
+          that case; the File menu opens the same two windows. ── */}
+      {showIcons && (
       <div style={{ position: "absolute", top: 60, right: 44, display: "grid", gap: 34, justifyItems: "center", width: 150 }}>
         {[
-          { label: "upload clothing", top: "linear-gradient(#ffd0ea,#f79ccb)", tab: "#ffd6ee" },
+          { label: "upload clothing", icon: heartButton, open: () => setPopupOpen(true) },
+          { label: "my clothing", icon: flowerButton, open: () => setMauveOpen(true) },
         ].map((f) => (
-          <div key={f.label} onClick={openPopup} style={{ display: "grid", justifyItems: "center", gap: 7, cursor: "pointer" }}>
-            <div style={{
-              width: 76, height: 60, borderRadius: "4px 10px 6px 6px", background: f.top,
-              border: "1px solid #d9679f", boxShadow: "2px 3px 0 rgba(160,60,110,.25)",
-              display: "grid", placeItems: "center", position: "relative",
-            }}>
-              <div style={{ position: "absolute", top: -7, left: 6, width: 30, height: 9, borderRadius: "4px 4px 0 0", background: f.tab, border: "1px solid #d9679f", borderBottom: "none" }} />
-              <span style={{ color: "#e0398a", fontSize: 26, textShadow: "0 1px 0 #fff" }}>{"♥"}</span>
-            </div>
+          <div key={f.label} onClick={f.open} style={{ display: "grid", justifyItems: "center", gap: 7, cursor: "pointer" }}>
+            {/* drop-shadow, not boxShadow: it follows the button's cut-out
+                silhouette instead of drawing a rectangle behind it */}
+            <img src={f.icon} alt="" draggable={false} style={{
+              width: ICON_SIZE, height: ICON_SIZE, objectFit: "contain", display: "block",
+              filter: "drop-shadow(2px 3px 0 rgba(160,60,110,.25))",
+            }} />
             <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: ".08em", color: "#7a3557" }}>{f.label}</span>
           </div>
         ))}
-        <div onClick={openMauve} style={{ display: "grid", justifyItems: "center", gap: 7, cursor: "pointer" }}>
-          <div style={{
-            width: 70, height: 70, borderRadius: "50%",
-            background: "radial-gradient(circle at 34% 30%,#fff 0 6%,#f6b9d6 24%,#d1728f 74%,#b45c7c 100%)",
-            border: "1px solid #b45c7c", boxShadow: "2px 3px 0 rgba(160,60,110,.25)", display: "grid", placeItems: "center",
-          }}>
-            <span style={{ color: "#8e3f60", fontSize: 18 }}>{"♥"}</span>
-          </div>
-          <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: ".08em", color: "#7a3557" }}>my clothing</span>
-        </div>
       </div>
+      )}
 
       {/* ── the big "Pick your character!" window (drag it by its title bar) ── */}
       <div style={{
-        position: "absolute", left: main.x, top: main.y, width: 600, height: 800, borderRadius: 8,
-        background: "linear-gradient(#f3f3f3,#e4e4e4)", border: "1px solid #9a9a9a",
-        boxShadow: "0 14px 34px rgba(120,70,100,.28)",
+        position: "absolute", left: main.x, top: main.y, width: size.w, height: size.h, borderRadius: 8,
+        background: "linear-gradient(#fdeaf1,#f9d6e3)", border: "1px solid #d99cb8",
+        boxShadow: "0 14px 34px rgba(150,90,120,.26)",
       }}>
         {/* title bar */}
         <div onPointerDown={(e) => startDrag("main", e)} style={{
           height: 30, display: "flex", alignItems: "center", padding: "0 10px", gap: 7,
           borderRadius: "7px 7px 0 0",
-          background: "repeating-linear-gradient(#f7f7f7,#f7f7f7 1px,#e2e2e2 1px,#e2e2e2 2px)",
-          borderBottom: "1px solid #a8a8a8", cursor: "grab", touchAction: "none",
+          background: "repeating-linear-gradient(#fff4f8,#fff4f8 1px,#f7dbe7 1px,#f7dbe7 2px)",
+          borderBottom: "1px solid #dfa4be", cursor: "grab", touchAction: "none",
         }}>
           <span style={{ width: 12, height: 12, borderRadius: "50%", background: "radial-gradient(circle at 34% 30%,#ffb0a6,#e0574a)", border: "1px solid #b7473c" }} />
           <span style={{ width: 12, height: 12, borderRadius: "50%", background: "radial-gradient(circle at 34% 30%,#ffe08a,#e0a92f)", border: "1px solid #b98d25" }} />
           <span style={{ width: 12, height: 12, borderRadius: "50%", background: "radial-gradient(circle at 34% 30%,#b9f39a,#5fbd45)", border: "1px solid #4d9a38" }} />
-          <span style={{ margin: "0 auto", fontSize: 12, fontWeight: 700, color: "#2a2a2a" }}></span>
-          <span style={{ width: 14, height: 11, borderRadius: 3, border: "1px solid #9a9a9a", background: "#efefef" }} />
+          <span style={{ margin: "0 auto", fontSize: 12, fontWeight: 700, color: "#4a2b38" }}></span>
+          <span style={{ width: 14, height: 11, borderRadius: 3, border: "1px solid #dfa4be", background: "#fdeef4" }} />
         </div>
 
         {/* finder-style toolbar */}
         <div style={{
-          height: 52, display: "flex", alignItems: "flex-end", gap: 22, padding: "4px 14px 5px",
-          background: "linear-gradient(#ededed,#dcdcdc)", borderBottom: "1px solid #b0b0b0",
+          height: 52, display: "flex", alignItems: "flex-end", gap: narrow ? 14 : 22, padding: narrow ? "4px 10px 5px" : "4px 14px 5px",
+          background: "linear-gradient(#fbe4ee,#f6d0e0)", borderBottom: "1px solid #e0a6c0",
         }}>
-          <div style={{ display: "grid", justifyItems: "center", gap: 1, color: "#333" }}>
-            <span style={{ width: 34, height: 22, borderRadius: 11, background: "linear-gradient(#fafafa,#d8d8d8)", border: "1px solid #a5a5a5", display: "grid", placeItems: "center", fontSize: 12 }}>{"←"}</span>
+          <div style={{ display: "grid", justifyItems: "center", gap: 1, color: "#6b3f52" }}>
+            <span style={{ width: 34, height: 22, borderRadius: 11, background: "linear-gradient(#fffafc,#f7d9e6)", border: "1px solid #dfa4be", display: "grid", placeItems: "center", fontSize: 12 }}>{"←"}</span>
             <span style={{ fontSize: 9 }}>Back</span>
           </div>
-          <div style={{ display: "grid", justifyItems: "center", gap: 1, color: "#333" }}>
-            <span style={{ display: "flex", gap: 2, padding: 4, borderRadius: 5, background: "linear-gradient(#fafafa,#d8d8d8)", border: "1px solid #a5a5a5" }}>
-              <span style={{ width: 8, height: 12, background: "#8a8a8a" }} />
-              <span style={{ width: 8, height: 12, background: "#c4c4c4" }} />
-              <span style={{ width: 8, height: 12, background: "#c4c4c4" }} />
+          <div style={{ display: "grid", justifyItems: "center", gap: 1, color: "#6b3f52" }}>
+            <span style={{ display: "flex", gap: 2, padding: 4, borderRadius: 5, background: "linear-gradient(#fffafc,#f7d9e6)", border: "1px solid #dfa4be" }}>
+              <span style={{ width: 8, height: 12, background: "#b4738f" }} />
+              <span style={{ width: 8, height: 12, background: "#edc9da" }} />
+              <span style={{ width: 8, height: 12, background: "#edc9da" }} />
             </span>
             <span style={{ fontSize: 9 }}>View</span>
           </div>
+          {!narrow && (
           <div style={{ display: "flex", gap: 20, marginLeft: 6 }}>
-            <div style={{ display: "grid", justifyItems: "center", gap: 2, color: "#333" }}><span style={{ width: 24, height: 19, borderRadius: 3, background: "linear-gradient(#c9d6e6,#8fa4bd)", border: "1px solid #6c7f96" }} /><span style={{ fontSize: 9 }}>Computer</span></div>
-            <div style={{ display: "grid", justifyItems: "center", gap: 2, color: "#333" }}><span style={{ width: 0, height: 0, borderLeft: "12px solid transparent", borderRight: "12px solid transparent", borderBottom: "12px solid #b98a5e" }} /><span style={{ fontSize: 9 }}>Home</span></div>
-            <div style={{ display: "grid", justifyItems: "center", gap: 2, color: "#333" }}><span style={{ fontSize: 17, lineHeight: "14px", color: "#d8395f" }}>{"♥"}</span><span style={{ fontSize: 9 }}>Favorites</span></div>
-            <div style={{ display: "grid", justifyItems: "center", gap: 2, color: "#333" }}><span style={{ fontFamily: MONO, fontSize: 15, lineHeight: "15px", color: "#3a3a3a" }}>A</span><span style={{ fontSize: 9 }}>Applications</span></div>
+            <div style={{ display: "grid", justifyItems: "center", gap: 2, color: "#6b3f52" }}><span style={{ width: 24, height: 19, borderRadius: 3, background: "linear-gradient(#c9d6e6,#8fa4bd)", border: "1px solid #6c7f96" }} /><span style={{ fontSize: 9 }}>Computer</span></div>
+            <div style={{ display: "grid", justifyItems: "center", gap: 2, color: "#6b3f52" }}><span style={{ width: 0, height: 0, borderLeft: "12px solid transparent", borderRight: "12px solid transparent", borderBottom: "12px solid #b98a5e" }} /><span style={{ fontSize: 9 }}>Home</span></div>
+            <div style={{ display: "grid", justifyItems: "center", gap: 2, color: "#6b3f52" }}><span style={{ fontSize: 17, lineHeight: "14px", color: "#d8395f" }}>{"♥"}</span><span style={{ fontSize: 9 }}>Favorites</span></div>
+            <div style={{ display: "grid", justifyItems: "center", gap: 2, color: "#6b3f52" }}><span style={{ fontFamily: MONO, fontSize: 15, lineHeight: "15px", color: "#6b3f52" }}>A</span><span style={{ fontSize: 9 }}>Applications</span></div>
           </div>
+          )}
         </div>
 
         {/* body: left list of palettes + center stage */}
-        <div style={{ display: "flex", height: "calc(100% - 82px)", padding: 12, boxSizing: "border-box" }}>
-          {/* left: the palette photos (scrolls if there are many) */}
-          <div className="pal-list" style={{ width: 150, display: "flex", flexDirection: "column", gap: 10, overflowY: "auto", overflowX: "hidden", paddingRight: 4 }}>
+        <div style={{
+          display: "flex", flexDirection: narrow ? "column" : "row",
+          height: "calc(100% - 82px)", padding: 12, boxSizing: "border-box",
+        }}>
+          {/* The palette photos, scrolling along whichever axis they're stacked
+              on: a column down the left normally, a strip across the top once
+              the window is too narrow to spare 150px of it. */}
+          <div className="pal-list" style={{
+            display: "flex", gap: 10,
+            ...(narrow
+              ? { flexDirection: "row", height: 128, flex: "none", overflowX: "auto", overflowY: "hidden", paddingBottom: 4 }
+              : { flexDirection: "column", width: 150, overflowY: "auto", overflowX: "hidden", paddingRight: 4 }),
+          }}>
             {PALETTES.map((pal) => {
               const active = picked === pal.id;
               return (
                 <div key={pal.id} onClick={() => open(pal)} style={{
-                  padding: 6, borderRadius: 5, cursor: "pointer", boxSizing: "border-box", flex: "none",
-                  border: "1px solid " + (active ? "#e0398a" : "#d3d3d3"),
-                  background: active ? "linear-gradient(#fff2f9,#ffdcef)" : "linear-gradient(#ffffff,#f4f4f4)",
+                  padding: 6, borderRadius: 5, cursor: "pointer", boxSizing: "border-box",
+                  flex: "none", width: narrow ? 112 : "100%",
+                  border: "1px solid " + (active ? "#e0398a" : "#eabfd2"),
+                  background: active ? "linear-gradient(#fff2f9,#ffdcef)" : "linear-gradient(#fffdfe,#fdf1f6)",
                   boxShadow: active ? "0 0 0 2px rgba(224,57,138,.22)" : "0 1px 2px rgba(0,0,0,.08)",
                 }}>
-                  <img src={pal.img} alt={pal.name} draggable={false} style={{ width: "100%", height: 84, objectFit: "cover", borderRadius: 4, display: "block" }} />
+                  <img src={pal.img} alt={pal.name} draggable={false} style={{ width: "100%", height: narrow ? 70 : 84, objectFit: "cover", borderRadius: 4, display: "block" }} />
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 5, gap: 4 }}>
                     <span style={{ fontFamily: MONO, fontSize: 7, letterSpacing: ".02em", color: "#8a4467", lineHeight: 1.2 }}>{pal.name}</span>
                     <span style={{ fontFamily: MONO, fontSize: 7.5, color: "#d0459a", flex: "none" }}>{pal.cue}</span>
@@ -412,25 +487,27 @@ export default function ClosetLLM() {
 
           {/* center stage */}
           <div className="stage" style={{
-            flex: 1, marginLeft: 12, background: "#fff", border: "1px solid #c9c9c9",
+            flex: 1, minWidth: 0, minHeight: 0,
+            marginLeft: narrow ? 0 : 12, marginTop: narrow ? 12 : 0,
+            background: "#fff", border: "1px solid #edc4d7",
             boxShadow: "0 1px 3px rgba(0,0,0,.12) inset", display: "grid",
             placeItems: pickedPal ? "start center" : "center", position: "relative", overflowY: "auto",
           }}>
             {!pickedPal ? (
               <div style={{ position: "relative", display: "grid", justifyItems: "center", gap: 14, textAlign: "center", padding: 24 }}>
-                <div style={{ width: 190, height: 190, border: "2px dashed #d9a8c4", borderRadius: 10, display: "grid", placeItems: "center", background: "repeating-linear-gradient(-45deg,#fdf3f9 0 8px,#ffffff 8px 16px)" }}>
+                <div style={{ width: narrow ? 132 : 190, height: narrow ? 132 : 190, border: "2px dashed #d9a8c4", borderRadius: 10, display: "grid", placeItems: "center", background: "repeating-linear-gradient(-45deg,#fdf3f9 0 8px,#ffffff 8px 16px)" }}>
                   <span style={{ fontFamily: MONO, fontSize: 9, color: "#c58bab", letterSpacing: ".08em" }}>EMPTY STAGE</span>
                 </div>
                 <div style={{ fontFamily: MONO, fontSize: 11, color: "#9a5b7c", letterSpacing: ".05em" }}>NO PALETTE SELECTED</div>
-                <div style={{ fontSize: 11, color: "#8b8b8b", maxWidth: 250, lineHeight: 1.55 }}>
-                  Click a palette on the left. A profile window opens beside this one.
+                <div style={{ fontSize: 11, color: "#8a6b78", maxWidth: 250, lineHeight: 1.55 }}>
+                  {`Click a palette ${narrow ? "above" : "on the left"}.`} A profile window opens beside this one.
                   <span style={{ animation: "blink 1.1s steps(1) infinite", color: "#d0459a" }}>&nbsp;{"▦"}</span>
                 </div>
               </div>
             ) : (
               <div style={{ position: "relative", display: "grid", justifyItems: "center", gap: 14, padding: 20, width: "100%", boxSizing: "border-box" }}>
-                <img src={pickedPal.img} alt={pickedPal.name} draggable={false} style={{ width: 220, height: 220, objectFit: "contain", borderRadius: 6, background: "#fff" }} />
-                <div style={{ fontFamily: MONO, fontSize: 15, letterSpacing: ".06em", color: "#2a2a2a", textAlign: "center" }}>{pickedPal.name}</div>
+                <img src={pickedPal.img} alt={pickedPal.name} draggable={false} style={{ width: narrow ? 150 : 220, height: narrow ? 150 : 220, objectFit: "contain", borderRadius: 6, background: "#fff" }} />
+                <div style={{ fontFamily: MONO, fontSize: 15, letterSpacing: ".06em", color: "#4a2b38", textAlign: "center" }}>{pickedPal.name}</div>
 
                 {/* what this palette pulls out of the closet */}
                 <div style={{ width: "100%", borderTop: "1px dashed #e3c3d5", paddingTop: 12, display: "grid", gap: 12 }}>
@@ -438,11 +515,11 @@ export default function ClosetLLM() {
                     {`YOUR CLOSET · ${hitCount(pickedPal)} MATCHES`}
                   </div>
                   {hitCount(pickedPal) === 0 ? (
-                    <div style={{ fontSize: 11, color: "#8b8b8b", lineHeight: 1.55 }}>
+                    <div style={{ fontSize: 11, color: "#8a6b78", lineHeight: 1.55 }}>
                       Nothing you own scores under {data.meta.cutoff} against these colors.
                     </div>
                   ) : (
-                    pickedPal.groups.map((group) => <MatchRow key={group.hex} group={group} size={70} />)
+                    pickedPal.groups.map((group) => <MatchRow key={group.hex} group={group} size={narrow ? 56 : 70} />)
                   )}
                 </div>
               </div>
@@ -452,12 +529,12 @@ export default function ClosetLLM() {
       </div>
 
       {/* ── profile pop-up: static, not tied to picking a palette ── */}
-      {popup.open && (
+      {popupOpen && (
         <div style={{
-          position: "absolute", left: popup.x, top: popup.y, width: 312, zIndex: 45,
+          position: "absolute", left: popup.x, top: popup.y, width: POPUP_W, zIndex: 45,
           borderRadius: 7, background: "linear-gradient(#ffe6f4,#ffd0e9)", border: "1px solid #d3699f",
           boxShadow: "0 12px 28px rgba(150,60,110,.3)",
-          transform: `scale(${PROFILE_SCALE})`, transformOrigin: "top left",
+          transform: `scale(${scale})`, transformOrigin: "top left",
         }}>
           {/* pop-up title bar (drag here) */}
           <div onPointerDown={(e) => startDrag("popup", e)} style={{
@@ -468,7 +545,7 @@ export default function ClosetLLM() {
             <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
               <span style={{ width: 14, height: 13, border: "1px solid #c95d93", borderRadius: 2, background: "#ffd3ea", display: "grid", placeItems: "center", fontSize: 8, color: "#8a3462" }}>{"–"}</span>
               <span style={{ width: 14, height: 13, border: "1px solid #c95d93", borderRadius: 2, background: "#ffd3ea", display: "grid", placeItems: "center", fontSize: 8, color: "#8a3462" }}>{"□"}</span>
-              <span onClick={(e) => { e.stopPropagation(); closePopup(); }} onPointerDown={(e) => e.stopPropagation()} style={{ width: 14, height: 13, border: "1px solid #c95d93", borderRadius: 2, background: "#ffbcdd", display: "grid", placeItems: "center", fontSize: 9, color: "#7d1f45", cursor: "pointer" }}>{"×"}</span>
+              <span onClick={(e) => { e.stopPropagation(); setPopupOpen(false); }} onPointerDown={(e) => e.stopPropagation()} style={{ width: 14, height: 13, border: "1px solid #c95d93", borderRadius: 2, background: "#ffbcdd", display: "grid", placeItems: "center", fontSize: 9, color: "#7d1f45", cursor: "pointer" }}>{"×"}</span>
             </span>
           </div>
 
@@ -478,12 +555,12 @@ export default function ClosetLLM() {
       )}
 
       {/* ── mauve pop-up: opened by the round desktop icon ── */}
-      {mauve.open && (
+      {mauveOpen && (
         <div style={{
-          position: "absolute", left: mauve.x, top: mauve.y, width: 312, zIndex: 46,
+          position: "absolute", left: mauve.x, top: mauve.y, width: POPUP_W, zIndex: 46,
           borderRadius: 7, background: "linear-gradient(#f7dcea,#e8c1d9)", border: "1px solid #a76e8f",
           boxShadow: "0 12px 28px rgba(120,60,100,.3)",
-          transform: `scale(${PROFILE_SCALE})`, transformOrigin: "top left",
+          transform: `scale(${scale})`, transformOrigin: "top left",
         }}>
           {/* title bar (drag here) */}
           <div onPointerDown={(e) => startDrag("mauve", e)} style={{
@@ -494,7 +571,7 @@ export default function ClosetLLM() {
             <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
               <span style={{ width: 14, height: 13, border: "1px solid #a0688a", borderRadius: 2, background: "#eed2e1", display: "grid", placeItems: "center", fontSize: 8, color: "#6d3352" }}>{"–"}</span>
               <span style={{ width: 14, height: 13, border: "1px solid #a0688a", borderRadius: 2, background: "#eed2e1", display: "grid", placeItems: "center", fontSize: 8, color: "#6d3352" }}>{"□"}</span>
-              <span onClick={(e) => { e.stopPropagation(); closeMauve(); }} onPointerDown={(e) => e.stopPropagation()} style={{ width: 14, height: 13, border: "1px solid #a0688a", borderRadius: 2, background: "#e2bcd4", display: "grid", placeItems: "center", fontSize: 9, color: "#57243d", cursor: "pointer" }}>{"×"}</span>
+              <span onClick={(e) => { e.stopPropagation(); setMauveOpen(false); }} onPointerDown={(e) => e.stopPropagation()} style={{ width: 14, height: 13, border: "1px solid #a0688a", borderRadius: 2, background: "#e2bcd4", display: "grid", placeItems: "center", fontSize: 9, color: "#57243d", cursor: "pointer" }}>{"×"}</span>
             </span>
           </div>
 
