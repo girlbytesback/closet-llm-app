@@ -21,6 +21,7 @@ from closetllm.config import (
     palette_url_prefix,
     project_root,
     web_garment_folder,
+    img_types
 )
 from closetllm.schemas import (
     GarmentsResponse,
@@ -28,6 +29,8 @@ from closetllm.schemas import (
     PalettesResponse,
     StatsResponse,
 )
+
+from pathlib import Path
 
 import json
 import logging
@@ -95,7 +98,16 @@ def get_color_matches(
 
 @app.post("/upload-garment", status_code=201)
 def upload_garment(file: UploadFile = File()):
-    return {"filename": file.filename, "content_type": file.content_type}
+    file_name = Path(file.filename).name
+    file_type = Path(file_name).suffix.lower()
+
+    if file_type not in img_types:
+        raise HTTPException(status_code=415, detail=f"unsupported type {file_type}")
+
+    dest = garment_folder / name             # Path.__truediv__ — "/" is overloaded to mean join. Paths.get(folder).resolve(name)
+    if dest.exists():
+        raise HTTPException(status_code=409, detail=f"{name} already exists")
+
 
 
 # ── Static assets ──────────────────────────────────────────────────────────
