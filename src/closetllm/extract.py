@@ -1,7 +1,9 @@
 import json
+import os 
+import tempfile
+import threading
 from dataclasses import dataclass
 from pathlib import Path
-
 from anthropic import Anthropic
 from closetllm.images import image_block
 from closetllm.color import validate_hex_value
@@ -16,6 +18,7 @@ from closetllm.config import (
 )
 
 _client = None
+_store_lock = threading.Lock()
 
 def client() -> Anthropic:
     """Build the API client on first use, not at import.
@@ -124,6 +127,20 @@ def load_data(path: Path) -> dict:
 # saves hex values to json file, creating data/ the first time
 def save_data(data: dict, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(data, indent=2, sort_keys=true)
+
+    # safe way to replace a file is to build the new one somewhere else first, then swap it in.
+    # temp file writing:
+
+    fd, tmp = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
+    with os.fdopen(fd, "w") as f:
+        f.write(text)
+    os.replace(tmp, path)
+    with _store_lock:
+        data = load_data(job.json_data)
+        data[file_name] = hexes
+        save_data(data, job.json_data)
+
     path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
 
 # walks the folder and fills in any photo we don't already have colors for
