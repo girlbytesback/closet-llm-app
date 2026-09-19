@@ -10,7 +10,7 @@ from fastapi import (
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from closetllm.color import default_cutoff
-from closetllm.extract import load_data
+from closetllm.extract import load_data, palette_job, garment_job
 from closetllm.match import build_matches, compute_matches
 from closetllm.config import (
     color_palettes_folder,
@@ -98,18 +98,11 @@ def get_color_matches(
 
 @app.post("/upload-garments", status_code=201)
 def upload_garment(file: UploadFile = File()):
-    file_name = Path(file.filename).name
-    file_type = Path(file_name).suffix.lower()
+    return ingest(file, garment_job, garment_folder, web_garment_folder)
 
-    if file_type not in img_types:
-        raise HTTPException(status_code=415, detail=f"unsupported type {file_type}")
-
-    dest = garment_folder / file_name             # Path.__truediv__ — "/" is overloaded to mean join. Paths.get(folder).resolve(name)
-    if dest.exists():
-        raise HTTPException(status_code=409, detail=f"{file_name} already exists")
-    
-    return {"ok": True, "filename": file_name} #will just return filename and ok if file name doesnt exist
-
+@app.post("/upload-palettes", status_code=201)
+def upload_palette(file: UploadFile = File()):
+    return ingest(file, palette_job, color_palettes_folder, None)
 
 
 # ── Static assets ──────────────────────────────────────────────────────────
