@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import threading
 from closetllm.config import img_types
 from closetllm.extract import ExtractPhotoDetails, extract_colors, garment_job, palette_job, load_data, save_data
 from closetllm.color import validate_hex_value
@@ -8,6 +9,9 @@ from closetllm.images import web_copy
 from pathlib import Path
 from fastapi import HTTPException, UploadFile
 
+# One lock for the whole process, shared by every request. FastAPI runs plain
+# `def` handlers in a threadpool, making two uploads run at once.
+_store_lock = threading.Lock()
 
 def remove_broken_photo(dest: Path, web_folder: Path | None) -> None:
     #delete photo + web copy to prevent crash (if JSON entry exists but garment doesnt)
@@ -46,9 +50,13 @@ def ingest(file: UploadFile, job: ExtractPhotoDetails, folder: Path, web_folder:
             raise HTTPException(status_code=502, detail=f"{file_name}: the model returned no colors")
 
         hexes = [validate_hex_value(v) for v in values]
-        data = load_data(job.json_data)
-        data[file_name] = hexes
-        save_data(data, job.json_data)
+        
+        # Read-modify-write on a shared file — serialized. The lock stays off the
+        # model call above, which takes seconds and would queue every other upload.
+        with _store_lock:
+            data = load_data(job.json_data)
+            data[file_name] = hexes
+            save_data(data, job.json_data)
     except Exception:
         remove_broken_photo(dest, web_folder)
         raise
