@@ -4,8 +4,11 @@ Kept out of conftest.py so a test module can import them by name; conftest
 puts this directory on sys.path.
 """
 
+import io
 import json
 from pathlib import Path
+
+from PIL import Image
 
 
 class FakeBlock:
@@ -41,3 +44,15 @@ class FakeMessages:
 
 def read_json(path: Path) -> dict:
     return json.loads(path.read_text())
+
+
+def jpeg_bytes(color=(180, 194, 154), size=(40, 40)) -> bytes:
+    """Real JPEG bytes for an upload payload.
+
+    Uploads have to carry a decodable image: web_copy and image_block both
+    open the file they are handed, so a b"fake" placeholder would blow up in
+    PIL rather than exercising the path under test.
+    """
+    buf = io.BytesIO()
+    Image.new("RGB", size, color).save(buf, format="JPEG")
+    return buf.getvalue()

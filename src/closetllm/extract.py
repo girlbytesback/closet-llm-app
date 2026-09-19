@@ -17,7 +17,6 @@ from closetllm.config import (
 
 _client = None
 
-
 def client() -> Anthropic:
     """Build the API client on first use, not at import.
 

@@ -29,7 +29,7 @@ from closetllm.schemas import (
     PalettesResponse,
     StatsResponse,
 )
-
+from closetllm.ingest import ingest
 from pathlib import Path
 
 import json

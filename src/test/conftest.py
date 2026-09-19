@@ -20,7 +20,13 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent))
 
 from closetllm import api, extract, match
-from helpers import FakeMessages, FakeResponse, FakeBlock, read_json  # noqa: F401
+from helpers import (  # noqa: F401
+    FakeMessages,
+    FakeResponse,
+    FakeBlock,
+    jpeg_bytes,
+    read_json,
+)
 
 # One chromatic palette color with two plausible garments, one near-black to
 # exercise the neutral filter, and one filename with a space in it.
@@ -142,3 +148,35 @@ def jobs_in_tmp(data_paths, monkeypatch):
         dataclasses.replace(extract.palette_job, json_data=data_paths.palettes),
     )
     return data_paths
+
+
+@pytest.fixture
+def upload_paths(data_paths, monkeypatch):
+    """Redirect everything an upload touches into tmp_path.
+
+    data_paths is not enough on its own here. api.py binds the photo folders
+    by name at import the same way it binds the stores, and the two jobs carry
+    their own json_data — so an upload would still write a real photo into
+    garments/ and a real entry into data/garments.json.
+    """
+    import dataclasses
+
+    root = data_paths.root
+    folders = SimpleNamespace(
+        garments=root / "garments",
+        web_garments=root / "assets" / "garments",
+        palettes=root / "color-palettes",
+        garments_json=data_paths.garments,
+        palettes_json=data_paths.palettes,
+    )
+
+    monkeypatch.setattr(api, "garment_folder", folders.garments)
+    monkeypatch.setattr(api, "web_garment_folder", folders.web_garments)
+    monkeypatch.setattr(api, "color_palettes_folder", folders.palettes)
+    monkeypatch.setattr(
+        api, "garment_job", dataclasses.replace(api.garment_job, json_data=data_paths.garments)
+    )
+    monkeypatch.setattr(
+        api, "palette_job", dataclasses.replace(api.palette_job, json_data=data_paths.palettes)
+    )
+    return folders
