@@ -4,8 +4,7 @@ from fastapi import (
     Query, 
     Request, 
     File, 
-    UploadFile,
-    HTTPException
+    UploadFile
 )
 
 from fastapi.staticfiles import StaticFiles
@@ -15,6 +14,7 @@ from closetllm.extract import load_data
 from closetllm.match import build_matches, compute_matches
 from closetllm.config import (
     color_palettes_folder,
+    garment_folder,
     garment_hex_colors,
     garment_url_prefix,
     palette_hex_colors,
@@ -96,7 +96,7 @@ def get_color_matches(
         raise HTTPException(status_code=404, detail=str(error))
     return build_matches(data, cutoff)
 
-@app.post("/upload-garment", status_code=201)
+@app.post("/upload-garments", status_code=201)
 def upload_garment(file: UploadFile = File()):
     file_name = Path(file.filename).name
     file_type = Path(file_name).suffix.lower()
@@ -104,9 +104,11 @@ def upload_garment(file: UploadFile = File()):
     if file_type not in img_types:
         raise HTTPException(status_code=415, detail=f"unsupported type {file_type}")
 
-    dest = garment_folder / name             # Path.__truediv__ — "/" is overloaded to mean join. Paths.get(folder).resolve(name)
+    dest = garment_folder / file_name             # Path.__truediv__ — "/" is overloaded to mean join. Paths.get(folder).resolve(name)
     if dest.exists():
-        raise HTTPException(status_code=409, detail=f"{name} already exists")
+        raise HTTPException(status_code=409, detail=f"{file_name} already exists")
+    
+    return {"ok": True, "filename": file_name} #will just return filename and ok if file name doesnt exist
 
 
 
