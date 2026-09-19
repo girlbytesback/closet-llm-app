@@ -3,10 +3,13 @@
 import base64
 import io
 from pathlib import Path
-
 from PIL import Image
 
 from closetllm.config import max_edge, web_max_edge
+
+# JPEG can't hold transparency; anything with alpha gets flattened onto white
+# rather than the black you'd get from a bare convert("RGB").
+WHITE = (255, 255, 255)
 
 def image_block(path: Path) -> dict:
     #load image from disk and convert to RGB

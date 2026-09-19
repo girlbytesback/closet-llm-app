@@ -1,13 +1,9 @@
 #downscale garment photos into web-sized copies for deployment.
 from pathlib import Path
-
 from PIL import Image
 
 from closetllm.config import garment_folder, img_types, web_garment_folder, web_max_edge
-
-# JPEG can't hold transparency; anything with alpha gets flattened onto white
-# rather than the black you'd get from a bare convert("RGB").
-WHITE = (255, 255, 255)
+from closetllm.images import web_copy
 
 def main() -> None:
     if not garment_folder.exists():
@@ -31,7 +27,6 @@ def main() -> None:
         f"{total_before // 1_048_576}MB -> {total_after // 1_048_576}MB "
         f"in {web_garment_folder}"
     )
-
 
 if __name__ == "__main__":
     main()
