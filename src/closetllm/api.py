@@ -4,7 +4,8 @@ from fastapi import (
     Query, 
     Request, 
     File, 
-    UploadFile
+    UploadFile, 
+    Depends
 )
 
 from fastapi.staticfiles import StaticFiles
@@ -28,7 +29,9 @@ from closetllm.schemas import (
     MatchesResponse,
     PalettesResponse,
     StatsResponse,
+    UploadResponse
 )
+from closetllm.auth import current_user
 from closetllm.ingest import ingest
 from pathlib import Path
 
@@ -47,7 +50,7 @@ def health():
     return {"ok": True}
 
 @app.get("/stats", response_model=StatsResponse)
-def stats():
+def stats(user_id: str = Depends(current_user)):
     # Readiness, not liveness: how much is actually in the store. Unlike
     # /garments an empty store is 200 with zeroes rather than a 404, because
     # "you have extracted nothing" is the answer here, not a missing resource.
@@ -59,23 +62,15 @@ def stats():
         "palettes": len(palettes),
     }
 
-@app.exception_handler(json.JSONDecodeError)
-def corrupt_data(request: Request, exc: json.JSONDecodeError):
-    log.error("corrupt data storage while serving %s: %s", request.url.path, exc)
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "data storage is corrupt; re-run extraction"},
-    )
-
 @app.get("/garments", response_model=GarmentsResponse)
-def get_garments():
+def get_garments(user_id: str = Depends(current_user)):
     garments = load_data(garment_hex_colors)
     if not garments:
         raise HTTPException(status_code=404, detail="no clothes saved yet")
     return {"count": len(garments), "garments": garments}
 
 @app.get("/color-palettes", response_model=PalettesResponse)
-def get_color_palettes():
+def get_color_palettes(user_id: str = Depends(current_user)):
     palettes = load_data(palette_hex_colors)
     if not palettes:
         raise HTTPException(status_code=404, detail="no palettes saved yet")
@@ -83,6 +78,7 @@ def get_color_palettes():
 
 @app.get("/color-matches", response_model=MatchesResponse)
 def get_color_matches(
+    user_id: str = Depends(current_user),
     cutoff: float = Query(
         default_cutoff,
         ge=0,
@@ -96,13 +92,21 @@ def get_color_matches(
         raise HTTPException(status_code=404, detail=str(error))
     return build_matches(data, cutoff)
 
-@app.post("/upload-garments", status_code=201)
-def upload_garment(file: UploadFile = File()):
+@app.post("/upload-garments", status_code=201, response_model=UploadResponse)
+def upload_garment(file: UploadFile = File(), user_id: str = Depends(current_user)):
     return ingest(file, garment_job, garment_folder, web_garment_folder)
 
-@app.post("/upload-palettes", status_code=201)
-def upload_palette(file: UploadFile = File()):
+@app.post("/upload-palettes", status_code=201, response_model=UploadResponse)
+def upload_palette(file: UploadFile = File(), user_id: str = Depends(current_user)):
     return ingest(file, palette_job, color_palettes_folder, None)
+
+@app.exception_handler(json.JSONDecodeError)
+def corrupt_data(request: Request, exc: json.JSONDecodeError):
+    log.error("corrupt data storage while serving %s: %s", request.url.path, exc)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "data storage is corrupt; re-run extraction"},
+    )
 
 
 # ── Static assets ──────────────────────────────────────────────────────────

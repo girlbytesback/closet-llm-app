@@ -35,3 +35,7 @@ class MatchesResponse(BaseModel):
     meta: Meta
     garments: dict[str, GarmentEntry]
     palettes: dict[str, PaletteEntry]
+
+class UploadResponse(BaseModel):
+    name: str
+    colors: list[str]
