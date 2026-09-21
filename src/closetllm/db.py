@@ -41,3 +41,22 @@ def _photos_table(name: str) -> Table:
 
 garments = _photos_table("garments")
 palettes = _photos_table("palettes")
+
+def load_user_colors(table: Table, user_id: str) -> dict[str, list[str]]:
+    """One user's rows, in the exact {filename: [hexes]} shape the JSON had."""
+    query = select(table.c.filename, table.c.colors).where(table.c.user_id == user_id)
+    with engine.connect() as conn:                 # borrow a pooled connection; returned on exit
+        rows = conn.execute(query)
+        return {filename: colors for filename, colors in rows}
+
+
+def add_photo(table: Table, user_id: str, filename: str, colors: list[str], storage_key: str) -> None:
+    """Insert one row. Raises 409 if this user already has this filename."""
+    row = insert(table).values(
+        user_id=user_id, filename=filename, colors=colors, storage_key=storage_key
+    )
+    try:
+        with engine.begin() as conn:               # transaction: commits on clean exit, rolls back on exception
+            conn.execute(row)
+    except IntegrityError:
+        raise HTTPException(status_code=409, detail=f"{filename} already exists")
