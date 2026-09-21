@@ -1,5 +1,13 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
+
+database_url = os.environ["DATABASE_URL"]
+supabase_url = os.environ["SUPABASE_URL"]
+supabase_secret_key = os.environ["SUPABASE_SECRET_KEY"]
+jwt_secret = os.environ["SUPABASE_JWT_SECRET"]
 
 project_root = Path(__file__).resolve().parents[2]
 
