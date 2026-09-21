@@ -186,21 +186,35 @@ function MatchRow({ group, size }) {
 }
 
 export default function ClosetLLM() {
-  // ── Data: fetched from the API after mount, so it starts empty ──
+  // ── Who's signed in ──
+  // undefined while the saved session is being read, null when signed out,
+  // an object when signed in. Everything below waits on this.
+  const session = useSession();
+
+  // ── Data: fetched from the API once someone is signed in ──
   const [data, setData] = useState(null);   // the matches document, once it arrives
   const [error, setError] = useState(null); // a message if the fetch failed
 
   useEffect(() => {
-    // Runs once, AFTER the first render. The empty [] dependency list is what
-    // means "once, on mount" (not on every re-render).
-    fetch("/color-matches")
+    // Signed out (or still checking): drop whatever the last user was looking at,
+    // so a sign-out followed by a different sign-in never flashes the old closet.
+    if (!session) {
+      setData(null);
+      setError(null);
+      return;
+    }
+    // authedFetch attaches `Authorization: Bearer <token>`. On a 401 it signs
+    // out, which flips session to null and lands back on the sign-in window.
+    authedFetch("/color-matches")
       .then((res) => {
         if (!res.ok) throw new Error(`server said ${res.status}`);
         return res.json();
       })
       .then(setData)                              // success → store it → re-render
       .catch((err) => setError(err.message));     // network/parse failure
-  }, []);
+    // Keyed on the user id, not the session object: the session is replaced
+    // every time the token refreshes (hourly), and that shouldn't refetch.
+  }, [session?.user.id]);
 
   // ── State: the things that change while you use the app ──
   const vp = useViewport();                     // live screen size; drives all the sizing below
@@ -217,6 +231,11 @@ export default function ClosetLLM() {
   const [popupAt, setPopupAt] = useState(null);
   const [mauveAt, setMauveAt] = useState(null);
 
+  // Early returns. They must stay BELOW every hook above: React needs the same
+  // hooks to run in the same order on every render, so returning before one of
+  // them would break the app the moment the session changes.
+  if (session === undefined) return <StatusScreen text="CHECKING WHO YOU ARE…" />;
+  if (!session) return <SignIn wallpaper={WALLPAPER} mono={MONO} />;
   // Until the fetch resolves, draw a status card and nothing else. These early
   // returns are why every data.* read below is safe — we never reach them unless
   // data exists.
@@ -369,6 +388,9 @@ export default function ClosetLLM() {
                   {[
                     { label: "upload clothing", isOpen: popupOpen, show: () => setPopupOpen(true) },
                     { label: "my clothing", isOpen: mauveOpen, show: () => setMauveOpen(true) },
+                    // signOut fires onAuthStateChange → session becomes null →
+                    // the early return above swaps in the sign-in window
+                    { label: "sign out", isOpen: false, show: () => supabase.auth.signOut() },
                   ].map((item) => (
                     <div key={item.label} className="menu-item" onClick={() => { item.show(); setMenu(null); }}>
                       {/* checkmark column: marks a window already on screen */}
