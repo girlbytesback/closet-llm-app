@@ -1,12 +1,15 @@
-"""ingest.py: one uploaded photo -> disk, web copy, model call, JSON store.
+"""ingest.py: one uploaded photo -> disk, web copy, model call, one row.
 
 The route handlers are one line each, so everything worth checking about an
-upload lives here. fake_model stands in for the client, so no test spends
-money; the uploads carry real JPEG bytes because web_copy and image_block
-both open the file they are handed.
+upload lives here. fake_model stands in for the client and fake_db for
+Postgres, so no test spends money or touches a real database; the uploads
+carry real JPEG bytes because web_copy and image_block both open the file
+they are handed.
+
+Which table a photo lands in is passed in rather than carried by the job, so
+every call below names one: db.garments or db.palettes.
 """
 
-import dataclasses
 import io
 
 import pytest
@@ -14,10 +17,11 @@ from fastapi import HTTPException
 from PIL import Image
 from starlette.datastructures import UploadFile
 
-from closetllm.extract import garment_job, load_data, palette_job, save_data
+from closetllm import db
+from closetllm.extract import garment_job, palette_job
 from closetllm.ingest import ingest, remove_broken_photo
 
-from helpers import jpeg_bytes
+from helpers import TEST_USER as USER, jpeg_bytes
 
 
 @pytest.fixture
@@ -32,8 +36,13 @@ def upload():
 
 
 @pytest.fixture
-def folders(tmp_path):
-    """Destination folders, deliberately not created — ingest makes them."""
+def folders(tmp_path, fake_db):
+    """Destination folders, deliberately not created — ingest makes them.
+
+    fake_db is pulled in here rather than asked for test by test: every call
+    to ingest() below writes a row, and an unfaked one would go looking for a
+    real database.
+    """
     from types import SimpleNamespace
 
     return SimpleNamespace(
@@ -43,14 +52,19 @@ def folders(tmp_path):
 
 
 @pytest.fixture
-def job(tmp_path):
-    """garment_job, pointed at a throwaway JSON store."""
-    return dataclasses.replace(garment_job, json_data=tmp_path / "garments.json")
+def job():
+    """The garment job: which model, tool and prompt to use.
+
+    Unmodified now — the job used to carry the JSON file to write to, and
+    pointing that at tmp_path was the whole reason this fixture existed. The
+    destination is the table argument instead.
+    """
+    return garment_job
 
 
 @pytest.fixture
-def palette(tmp_path):
-    return dataclasses.replace(palette_job, json_data=tmp_path / "colors.json")
+def palette():
+    return palette_job
 
 
 # ----------------------------------------------------------- file type gate
@@ -60,7 +74,7 @@ def test_a_non_photo_is_rejected_as_415(filename, upload, folders, job, fake_mod
     messages = fake_model()  # any model call at all fails the test
 
     with pytest.raises(HTTPException) as err:
-        ingest(upload(filename, b"whatever"), job, folders.photos, None)
+        ingest(upload(filename, b"whatever"), job, db.garments, folders.photos, None, USER)
 
     assert err.value.status_code == 415
     assert messages.calls == []
@@ -72,7 +86,7 @@ def test_a_non_photo_is_rejected_as_415(filename, upload, folders, job, fake_mod
 def test_an_uppercase_extension_is_accepted(filename, upload, folders, job, fake_model):
     fake_model({"item": "shirt", "color": "#B5C29A"})
 
-    result = ingest(upload(filename), job, folders.photos, None)
+    result = ingest(upload(filename), job, db.garments, folders.photos, None, USER)
 
     assert result["name"] == filename
 
@@ -82,7 +96,7 @@ def test_a_filename_with_a_space_is_kept_verbatim(upload, folders, job, fake_mod
     # broken image later
     fake_model({"item": "dress", "color": "#E4A8C0"})
 
-    result = ingest(upload("pink dress.jpeg"), job, folders.photos, None)
+    result = ingest(upload("pink dress.jpeg"), job, db.garments, folders.photos, None, USER)
 
     assert result["name"] == "pink dress.jpeg"
     assert (folders.photos / "pink dress.jpeg").exists()
@@ -98,7 +112,7 @@ def test_a_path_in_the_filename_cannot_escape_the_folder(
     # the client controls this string entirely; only the last component is ours
     fake_model({"item": "shirt", "color": "#B5C29A"})
 
-    result = ingest(upload(filename), job, folders.photos, None)
+    result = ingest(upload(filename), job, db.garments, folders.photos, None, USER)
 
     assert result["name"] == "evil.jpeg"
     assert (folders.photos / "evil.jpeg").exists()
@@ -107,19 +121,35 @@ def test_a_path_in_the_filename_cannot_escape_the_folder(
 
 # ------------------------------------------------------------------ conflict
 
-def test_an_existing_photo_is_rejected_as_409(upload, folders, job, fake_model):
+def test_a_filename_this_user_already_has_is_409(upload, folders, job, fake_db, fake_model):
+    # the row is what makes a filename taken, not the file on disk: a photo
+    # sitting in the folder with no row behind it is leftovers, and an upload
+    # that matches a row must not overwrite the photo backing it
+    fake_db.seed(db.garments, USER, {"shirt.jpeg": ["#123456"]})
     folders.photos.mkdir(parents=True)
     (folders.photos / "shirt.jpeg").write_bytes(b"the original")
     messages = fake_model()
 
     with pytest.raises(HTTPException) as err:
-        ingest(upload("shirt.jpeg"), job, folders.photos, None)
+        ingest(upload("shirt.jpeg"), job, db.garments, folders.photos, None, USER)
 
     assert err.value.status_code == 409
     assert "shirt.jpeg" in err.value.detail
-    # overwriting would silently replace a photo whose colors are already saved
     assert (folders.photos / "shirt.jpeg").read_bytes() == b"the original"
-    assert messages.calls == []
+    assert fake_db.garments() == {"shirt.jpeg": ["#123456"]}
+    assert messages.calls == []       # refused before the model is paid for
+
+
+def test_the_same_filename_under_another_user_is_allowed(upload, folders, job, fake_db, fake_model):
+    # rows are owned; two people are each allowed a shirt.jpeg
+    fake_db.seed(db.garments, "someone-else", {"shirt.jpeg": ["#123456"]})
+    fake_model({"item": "shirt", "color": "#B5C29A"})
+
+    result = ingest(upload("shirt.jpeg"), job, db.garments, folders.photos, None, USER)
+
+    assert result["colors"] == ["#B5C29A"]
+    assert fake_db.garments() == {"shirt.jpeg": ["#B5C29A"]}
+    assert fake_db.garments("someone-else") == {"shirt.jpeg": ["#123456"]}
 
 
 # ------------------------------------------------------------- writing files
@@ -128,7 +158,7 @@ def test_the_photo_lands_in_the_folder_byte_for_byte(upload, folders, job, fake_
     fake_model({"item": "shirt", "color": "#B5C29A"})
     content = jpeg_bytes(color=(228, 168, 192))
 
-    ingest(upload("shirt.jpeg", content), job, folders.photos, None)
+    ingest(upload("shirt.jpeg", content), job, db.garments, folders.photos, None, USER)
 
     assert (folders.photos / "shirt.jpeg").read_bytes() == content
 
@@ -137,7 +167,7 @@ def test_a_missing_destination_folder_is_created(upload, folders, job, fake_mode
     fake_model({"item": "shirt", "color": "#B5C29A"})
     assert not folders.photos.exists()
 
-    ingest(upload("shirt.jpeg"), job, folders.photos, None)
+    ingest(upload("shirt.jpeg"), job, db.garments, folders.photos, None, USER)
 
     assert (folders.photos / "shirt.jpeg").exists()
 
@@ -147,7 +177,7 @@ def test_a_missing_destination_folder_is_created(upload, folders, job, fake_mode
 def test_a_web_copy_is_written_under_the_same_name(upload, folders, job, fake_model):
     fake_model({"item": "shirt", "color": "#B5C29A"})
 
-    ingest(upload("shirt.jpeg"), job, folders.photos, folders.web)
+    ingest(upload("shirt.jpeg"), job, db.garments, folders.photos, folders.web, USER)
 
     assert (folders.web / "shirt.jpeg").exists()
 
@@ -158,7 +188,7 @@ def test_the_web_copy_is_downscaled_not_just_duplicated(upload, folders, job, fa
     fake_model({"item": "shirt", "color": "#B5C29A"})
     big = jpeg_bytes(size=(2000, 1500))
 
-    ingest(upload("shirt.jpeg", big), job, folders.photos, folders.web)
+    ingest(upload("shirt.jpeg", big), job, db.garments, folders.photos, folders.web, USER)
 
     assert max(Image.open(folders.web / "shirt.jpeg").size) == web_max_edge
     # the original is untouched — it is what offline extraction reads
@@ -169,7 +199,7 @@ def test_no_web_folder_means_no_web_copy(upload, folders, palette, fake_model):
     # palettes are uploaded with web_folder=None; nothing should be created
     fake_model({"colors": ["#B5C29A"]})
 
-    ingest(upload("inspo.jpeg"), palette, folders.photos, None)
+    ingest(upload("inspo.jpeg"), palette, db.palettes, folders.photos, None, USER)
 
     assert not folders.web.exists()
 
@@ -178,7 +208,7 @@ def test_a_missing_web_folder_is_created(upload, folders, job, fake_model):
     fake_model({"item": "shirt", "color": "#B5C29A"})
     assert not folders.web.exists()
 
-    ingest(upload("shirt.jpeg"), job, folders.photos, folders.web)
+    ingest(upload("shirt.jpeg"), job, db.garments, folders.photos, folders.web, USER)
 
     assert (folders.web / "shirt.jpeg").exists()
 
@@ -188,7 +218,7 @@ def test_a_missing_web_folder_is_created(upload, folders, job, fake_model):
 def test_a_single_color_comes_back_wrapped_in_a_list(upload, folders, job, fake_model):
     fake_model({"item": "shirt", "color": "#B5C29A"})
 
-    assert ingest(upload("shirt.jpeg"), job, folders.photos, None) == {
+    assert ingest(upload("shirt.jpeg"), job, db.garments, folders.photos, None, USER) == {
         "name": "shirt.jpeg",
         "colors": ["#B5C29A"],
     }
@@ -197,7 +227,7 @@ def test_a_single_color_comes_back_wrapped_in_a_list(upload, folders, job, fake_
 def test_a_palettes_colors_are_all_kept(upload, folders, palette, fake_model):
     fake_model({"colors": ["#B5C29A", "#E4A8C0"]})
 
-    result = ingest(upload("inspo.jpeg"), palette, folders.photos, None)
+    result = ingest(upload("inspo.jpeg"), palette, db.palettes, folders.photos, None, USER)
 
     assert result["colors"] == ["#B5C29A", "#E4A8C0"]
 
@@ -213,31 +243,31 @@ def test_the_colors_are_normalized_before_they_are_saved(
     # match.py compares these strings against the committed data
     fake_model({"item": "shirt", "color": returned})
 
-    result = ingest(upload("shirt.jpeg"), job, folders.photos, None)
+    result = ingest(upload("shirt.jpeg"), job, db.garments, folders.photos, None, USER)
 
     assert result["colors"] == [expected]
 
 
-def test_an_empty_color_list_is_a_502(upload, folders, palette, fake_model):
+def test_an_empty_color_list_is_a_502(upload, folders, palette, fake_db, fake_model):
     # an empty list saves cleanly and then blows up much later inside
     # score_garment's min() — refuse the upload instead
     fake_model({"colors": []})
 
     with pytest.raises(HTTPException) as err:
-        ingest(upload("inspo.jpeg"), palette, folders.photos, None)
+        ingest(upload("inspo.jpeg"), palette, db.palettes, folders.photos, None, USER)
 
     assert err.value.status_code == 502
     assert "inspo.jpeg" in err.value.detail
-    assert load_data(palette.json_data) == {}
+    assert fake_db.palettes() == {}
 
 
-def test_a_color_that_is_not_hex_is_refused(upload, folders, job, fake_model):
+def test_a_color_that_is_not_hex_is_refused(upload, folders, job, fake_db, fake_model):
     fake_model({"item": "shirt", "color": "sage green"})
 
     with pytest.raises(ValueError):
-        ingest(upload("shirt.jpeg"), job, folders.photos, None)
+        ingest(upload("shirt.jpeg"), job, db.garments, folders.photos, None, USER)
 
-    assert load_data(job.json_data) == {}
+    assert fake_db.garments() == {}
 
 
 def test_a_model_failure_leaves_no_orphan_photo(upload, folders, job, fake_model):
@@ -246,7 +276,7 @@ def test_a_model_failure_leaves_no_orphan_photo(upload, folders, job, fake_model
     fake_model(RuntimeError("the model is down"))
 
     with pytest.raises(RuntimeError):
-        ingest(upload("shirt.jpeg"), job, folders.photos, None)
+        ingest(upload("shirt.jpeg"), job, db.garments, folders.photos, None, USER)
 
     assert not (folders.photos / "shirt.jpeg").exists()
 
@@ -257,7 +287,7 @@ def test_a_model_failure_also_removes_the_web_copy(upload, folders, job, fake_mo
     fake_model(RuntimeError("the model is down"))
 
     with pytest.raises(RuntimeError):
-        ingest(upload("shirt.jpeg"), job, folders.photos, folders.web)
+        ingest(upload("shirt.jpeg"), job, db.garments, folders.photos, folders.web, USER)
 
     assert not (folders.photos / "shirt.jpeg").exists()
     assert not (folders.web / "shirt.jpeg").exists()
@@ -267,55 +297,68 @@ def test_a_retry_after_a_model_failure_succeeds(upload, folders, job, fake_model
     fake_model(RuntimeError("the model is down"), {"item": "shirt", "color": "#B5C29A"})
 
     with pytest.raises(RuntimeError):
-        ingest(upload("shirt.jpeg"), job, folders.photos, None)
+        ingest(upload("shirt.jpeg"), job, db.garments, folders.photos, None, USER)
 
-    result = ingest(upload("shirt.jpeg"), job, folders.photos, None)
+    result = ingest(upload("shirt.jpeg"), job, db.garments, folders.photos, None, USER)
     assert result["colors"] == ["#B5C29A"]
 
 
-# ------------------------------------------------------------- the JSON store
+# ----------------------------------------------------------------- the row
 
-def test_the_entry_is_written_to_the_jobs_store(upload, folders, job, fake_model):
+def test_the_row_is_written_for_the_uploading_user(upload, folders, job, fake_db, fake_model):
     fake_model({"item": "shirt", "color": "#B5C29A"})
 
-    ingest(upload("shirt.jpeg"), job, folders.photos, None)
+    ingest(upload("shirt.jpeg"), job, db.garments, folders.photos, None, USER)
 
-    assert load_data(job.json_data) == {"shirt.jpeg": ["#B5C29A"]}
+    assert fake_db.garments() == {"shirt.jpeg": ["#B5C29A"]}
+    assert fake_db.calls == [
+        {
+            "table": "garments",
+            "user_id": USER,
+            "filename": "shirt.jpeg",
+            "colors": ["#B5C29A"],
+            # the photo is stored under its own name; the column exists so the
+            # bytes can move to object storage later without renaming anything
+            "storage_key": "shirt.jpeg",
+        }
+    ]
 
 
 def test_an_upload_does_not_disturb_the_photos_already_saved(
-    upload, folders, job, fake_model
+    upload, folders, job, fake_db, fake_model
 ):
-    save_data({"old.jpeg": ["#123456"]}, job.json_data)
+    fake_db.seed(db.garments, USER, {"old.jpeg": ["#123456"]})
     fake_model({"item": "shirt", "color": "#B5C29A"})
 
-    ingest(upload("shirt.jpeg"), job, folders.photos, None)
+    ingest(upload("shirt.jpeg"), job, db.garments, folders.photos, None, USER)
 
-    assert load_data(job.json_data) == {
+    assert fake_db.garments() == {
         "old.jpeg": ["#123456"],
         "shirt.jpeg": ["#B5C29A"],
     }
 
 
-def test_two_uploads_both_land(upload, folders, job, fake_model):
+def test_two_uploads_both_land(upload, folders, job, fake_db, fake_model):
     fake_model({"item": "a", "color": "#B5C29A"}, {"item": "b", "color": "#E4A8C0"})
 
-    ingest(upload("a.jpeg"), job, folders.photos, None)
-    ingest(upload("b.jpeg"), job, folders.photos, None)
+    ingest(upload("a.jpeg"), job, db.garments, folders.photos, None, USER)
+    ingest(upload("b.jpeg"), job, db.garments, folders.photos, None, USER)
 
-    assert load_data(job.json_data) == {"a.jpeg": ["#B5C29A"], "b.jpeg": ["#E4A8C0"]}
+    assert fake_db.garments() == {"a.jpeg": ["#B5C29A"], "b.jpeg": ["#E4A8C0"]}
 
 
-def test_a_garment_and_a_palette_write_to_different_stores(
-    upload, folders, job, palette, fake_model
+def test_a_garment_and_a_palette_write_to_different_tables(
+    upload, folders, job, palette, fake_db, fake_model
 ):
+    # the table is the argument that routes them; crossing it would file a
+    # garment as an inspiration palette
     fake_model({"item": "shirt", "color": "#B5C29A"}, {"colors": ["#E4A8C0"]})
 
-    ingest(upload("shirt.jpeg"), job, folders.photos, None)
-    ingest(upload("inspo.jpeg"), palette, folders.photos, None)
+    ingest(upload("shirt.jpeg"), job, db.garments, folders.photos, None, USER)
+    ingest(upload("inspo.jpeg"), palette, db.palettes, folders.photos, None, USER)
 
-    assert load_data(job.json_data) == {"shirt.jpeg": ["#B5C29A"]}
-    assert load_data(palette.json_data) == {"inspo.jpeg": ["#E4A8C0"]}
+    assert fake_db.garments() == {"shirt.jpeg": ["#B5C29A"]}
+    assert fake_db.palettes() == {"inspo.jpeg": ["#E4A8C0"]}
 
 
 # ------------------------------------------------------------- the model call
@@ -325,7 +368,7 @@ def test_the_job_decides_which_model_and_tool_are_used(
 ):
     messages = fake_model({"colors": ["#B5C29A"]})
 
-    ingest(upload("inspo.jpeg"), palette, folders.photos, None)
+    ingest(upload("inspo.jpeg"), palette, db.palettes, folders.photos, None, USER)
 
     sent = messages.calls[0]
     assert sent["model"] == palette.model
@@ -335,7 +378,7 @@ def test_the_job_decides_which_model_and_tool_are_used(
 def test_the_model_sees_the_saved_photo_exactly_once(upload, folders, job, fake_model):
     messages = fake_model({"item": "shirt", "color": "#B5C29A"})
 
-    ingest(upload("shirt.jpeg"), job, folders.photos, None)
+    ingest(upload("shirt.jpeg"), job, db.garments, folders.photos, None, USER)
 
     assert len(messages.calls) == 1
     assert messages.calls[0]["messages"][0]["content"][0]["type"] == "image"
@@ -349,7 +392,7 @@ def test_an_empty_color_list_removes_both_copies(upload, folders, palette, fake_
     fake_model({"colors": []})
 
     with pytest.raises(HTTPException):
-        ingest(upload("inspo.jpeg"), palette, folders.photos, folders.web)
+        ingest(upload("inspo.jpeg"), palette, db.palettes, folders.photos, folders.web, USER)
 
     assert not (folders.photos / "inspo.jpeg").exists()
     assert not (folders.web / "inspo.jpeg").exists()
@@ -359,7 +402,7 @@ def test_a_bad_hex_removes_both_copies(upload, folders, job, fake_model):
     fake_model({"item": "shirt", "color": "sage green"})
 
     with pytest.raises(ValueError):
-        ingest(upload("shirt.jpeg"), job, folders.photos, folders.web)
+        ingest(upload("shirt.jpeg"), job, db.garments, folders.photos, folders.web, USER)
 
     assert not (folders.photos / "shirt.jpeg").exists()
     assert not (folders.web / "shirt.jpeg").exists()
@@ -370,72 +413,83 @@ def test_a_retry_after_a_502_is_not_blocked_by_a_409(upload, folders, palette, f
     fake_model({"colors": []}, {"colors": ["#B5C29A"]})
 
     with pytest.raises(HTTPException) as err:
-        ingest(upload("inspo.jpeg"), palette, folders.photos, folders.web)
+        ingest(upload("inspo.jpeg"), palette, db.palettes, folders.photos, folders.web, USER)
     assert err.value.status_code == 502
 
-    result = ingest(upload("inspo.jpeg"), palette, folders.photos, folders.web)
+    result = ingest(upload("inspo.jpeg"), palette, db.palettes, folders.photos, folders.web, USER)
     assert result["colors"] == ["#B5C29A"]
 
 
-def test_a_file_that_is_not_really_a_photo_is_cleaned_up(upload, folders, job, fake_model):
+def test_a_file_that_is_not_really_a_photo_is_cleaned_up(upload, folders, job, fake_db, fake_model):
     # the gate checks the extension, not the bytes; PIL is what finds out, and
     # by then the file is already written
     messages = fake_model()
     payload = upload("shirt.jpeg", b"this is not a JPEG")
 
     with pytest.raises(Exception):
-        ingest(payload, job, folders.photos, folders.web)
+        ingest(payload, job, db.garments, folders.photos, folders.web, USER)
 
     assert not (folders.photos / "shirt.jpeg").exists()
     assert not (folders.web / "shirt.jpeg").exists()
-    assert messages.calls == []       # web_copy failed before the call
-    assert load_data(job.json_data) == {}
+    assert messages.calls == []       # PIL failed while building the image block
+    assert fake_db.garments() == {}
 
 
-def test_a_store_that_cannot_be_written_leaves_no_orphan(upload, folders, tmp_path, fake_model):
-    # save_data mkdirs the parent; a file sitting where that directory belongs
-    # makes the write fail after the model has already been paid for
-    (tmp_path / "blocked").write_text("not a directory")
-    job = dataclasses.replace(garment_job, json_data=tmp_path / "blocked" / "garments.json")
+def test_an_insert_that_fails_leaves_no_orphan(upload, folders, monkeypatch, fake_model):
+    # the insert is the last thing to run and the model has already been paid
+    # for by then; a photo left behind would have nothing pointing at it
+    def boom(*args, **kwargs):
+        raise OSError("the database is unreachable")
+
+    monkeypatch.setattr(db, "add_photo", boom)
     fake_model({"item": "shirt", "color": "#B5C29A"})
 
     with pytest.raises(OSError):
-        ingest(upload("shirt.jpeg"), job, folders.photos, folders.web)
+        ingest(upload("shirt.jpeg"), garment_job, db.garments, folders.photos, folders.web, USER)
 
     assert not (folders.photos / "shirt.jpeg").exists()
     assert not (folders.web / "shirt.jpeg").exists()
+    assert list(folders.photos.iterdir()) == []      # not even the staged copy
 
 
-def test_a_409_does_not_touch_the_photo_already_there(upload, folders, job, fake_model):
-    # the conflict is raised before the try, and it must stay there: cleaning up
-    # on a 409 would delete the very photo the upload collided with
+def test_a_409_from_the_constraint_does_not_touch_the_photo_already_there(
+    upload, folders, job, fake_db, monkeypatch, fake_model
+):
+    # the pre-check is only a fast path — two requests can both pass it, and the
+    # loser finds out from the unique constraint after its photo is written. It
+    # is written under a staging name for exactly this reason: cleaning up must
+    # not delete the photo the upload collided with.
     folders.photos.mkdir(parents=True)
     folders.web.mkdir(parents=True)
     (folders.photos / "shirt.jpeg").write_bytes(b"the original")
     (folders.web / "shirt.jpeg").write_bytes(b"the original web copy")
-    fake_model()
+    monkeypatch.setattr(db, "load_user_colors", lambda table, user_id: {})   # lose the race
+    fake_db.seed(db.garments, USER, {"shirt.jpeg": ["#123456"]})
+    fake_model({"item": "shirt", "color": "#B5C29A"})
 
     with pytest.raises(HTTPException) as err:
-        ingest(upload("shirt.jpeg"), job, folders.photos, folders.web)
+        ingest(upload("shirt.jpeg"), job, db.garments, folders.photos, folders.web, USER)
 
     assert err.value.status_code == 409
     assert (folders.photos / "shirt.jpeg").read_bytes() == b"the original"
     assert (folders.web / "shirt.jpeg").read_bytes() == b"the original web copy"
+    assert sorted(p.name for p in folders.photos.iterdir()) == ["shirt.jpeg"]
+    assert fake_db.garments() == {"shirt.jpeg": ["#123456"]}
 
 
 def test_a_failed_upload_does_not_disturb_the_photos_already_saved(
-    upload, folders, job, fake_model
+    upload, folders, job, fake_db, fake_model
 ):
-    save_data({"old.jpeg": ["#123456"]}, job.json_data)
+    fake_db.seed(db.garments, USER, {"old.jpeg": ["#123456"]})
     folders.photos.mkdir(parents=True)
     (folders.photos / "old.jpeg").write_bytes(jpeg_bytes())
     fake_model(RuntimeError("the model is down"))
 
     with pytest.raises(RuntimeError):
-        ingest(upload("shirt.jpeg"), job, folders.photos, folders.web)
+        ingest(upload("shirt.jpeg"), job, db.garments, folders.photos, folders.web, USER)
 
     assert (folders.photos / "old.jpeg").exists()
-    assert load_data(job.json_data) == {"old.jpeg": ["#123456"]}
+    assert fake_db.garments() == {"old.jpeg": ["#123456"]}
 
 
 # ------------------------------------------------------- remove_broken_photo

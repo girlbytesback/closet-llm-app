@@ -1,8 +1,9 @@
 """Shared fixtures.
 
-Two things every test outside the pure-math ones needs: somewhere to put JSON
-that isn't the real data/ directory, and a stand-in for the model so no test
-ever spends money or needs a key.
+Three things every test outside the pure-math ones needs: somewhere to put
+JSON that isn't the real data/ directory, a stand-in for the model so no test
+ever spends money or needs a key, and a stand-in for the database so no test
+ever reaches the one the real closet lives in.
 
 config.py hands out its paths as module-level constants, and match.py and
 api.py bind them by name at import. Patching closetllm.config.<name> after
@@ -19,12 +20,15 @@ import pytest
 # so `from helpers import ...` works from any test subdirectory
 sys.path.insert(0, str(Path(__file__).parent))
 
-from closetllm import api, extract, match
+from closetllm import api, db, extract, match
 from closetllm.auth import current_user
 from helpers import (  # noqa: F401
+    FakeDB,
     FakeMessages,
     FakeResponse,
     FakeBlock,
+    RefusingEngine,
+    TEST_USER,
     jpeg_bytes,
     read_json,
 )
@@ -77,6 +81,36 @@ def seeded(data_paths):
     return data_paths
 
 
+@pytest.fixture(autouse=True)
+def no_real_database(request, monkeypatch):
+    """Make an unfaked database call fail instead of reaching Supabase.
+
+    db.engine is built at import from DATABASE_URL — on a laptop that is the
+    database holding the real closet, and .env means it is always set. Every
+    test therefore runs with the engine replaced by one that refuses; fake_db
+    below patches the two functions that would have used it. The opt-in
+    postgres tests are the only ones that keep a working engine.
+    """
+    if request.node.get_closest_marker("postgres"):
+        return
+    monkeypatch.setattr(db, "engine", RefusingEngine())
+
+
+@pytest.fixture
+def fake_db(monkeypatch):
+    """Swap closetllm.db's two functions for the in-memory FakeDB.
+
+    Same trick as fake_model, and for the same reason: the tests that use it
+    care about what ingest does with a row, not about Postgres. ingest calls
+    both functions through the module (`db.add_photo`), so patching the
+    attributes here redirects every caller.
+    """
+    fake = FakeDB()
+    monkeypatch.setattr(db, "add_photo", fake.add_photo)
+    monkeypatch.setattr(db, "load_user_colors", fake.load_user_colors)
+    return fake
+
+
 @pytest.fixture
 def client(data_paths):
     """A signed-in client, so no test needs a real Supabase token.
@@ -87,7 +121,7 @@ def client(data_paths):
     """
     from fastapi.testclient import TestClient
 
-    api.app.dependency_overrides[current_user] = lambda: "test-user"
+    api.app.dependency_overrides[current_user] = lambda: TEST_USER
     yield TestClient(api.app)
     api.app.dependency_overrides.clear()
 
@@ -160,32 +194,24 @@ def jobs_in_tmp(data_paths, monkeypatch):
 
 
 @pytest.fixture
-def upload_paths(data_paths, monkeypatch):
-    """Redirect everything an upload touches into tmp_path.
+def upload_paths(data_paths, fake_db, monkeypatch):
+    """Redirect everything an upload touches away from the real thing.
 
-    data_paths is not enough on its own here. api.py binds the photo folders
-    by name at import the same way it binds the stores, and the two jobs carry
-    their own json_data — so an upload would still write a real photo into
-    garments/ and a real entry into data/garments.json.
+    Two halves, because an upload writes to two places. The photo folders are
+    bound by name in api.py at import, the same way the stores are, so an
+    upload would otherwise drop a real photo into garments/; they are pointed
+    at tmp_path here. The row goes to the database, so fake_db is pulled in
+    too — and returned as `.db`, which is where these tests assert.
     """
-    import dataclasses
-
     root = data_paths.root
     folders = SimpleNamespace(
         garments=root / "garments",
         web_garments=root / "assets" / "garments",
         palettes=root / "color-palettes",
-        garments_json=data_paths.garments,
-        palettes_json=data_paths.palettes,
+        db=fake_db,
     )
 
     monkeypatch.setattr(api, "garment_folder", folders.garments)
     monkeypatch.setattr(api, "web_garment_folder", folders.web_garments)
     monkeypatch.setattr(api, "color_palettes_folder", folders.palettes)
-    monkeypatch.setattr(
-        api, "garment_job", dataclasses.replace(api.garment_job, json_data=data_paths.garments)
-    )
-    monkeypatch.setattr(
-        api, "palette_job", dataclasses.replace(api.palette_job, json_data=data_paths.palettes)
-    )
     return folders

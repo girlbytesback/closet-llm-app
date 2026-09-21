@@ -32,6 +32,7 @@ from closetllm.schemas import (
 )
 from closetllm.auth import current_user
 from closetllm.ingest import ingest
+from closetllm import db
 
 import json
 import logging
@@ -47,9 +48,11 @@ def health():
     # store has usable content is what /garments and /color-palettes report.
     return {"ok": True}
 
-# Auth is declared as a route dependency rather than a handler argument: none of
-# these handlers read the user id, they only need the 401 that current_user
-# raises. The store is still single-user, so nothing below filters by owner yet.
+# Auth as a route dependency rather than a handler argument, for the handlers
+# that only need the 401 current_user raises and never read the user id. The
+# read routes below still serve the JSON store, which has no owner column, so
+# they are in that group; the two upload routes take the id as an argument
+# because the row they write is owned.
 auth_required = [Depends(current_user)]
 
 @app.get("/stats", response_model=StatsResponse, dependencies=auth_required)
@@ -94,13 +97,13 @@ def get_color_matches(
         raise HTTPException(status_code=404, detail=str(error))
     return build_matches(data, cutoff)
 
-@app.post("/upload-garments", status_code=201, response_model=UploadResponse, dependencies=auth_required)
-def upload_garment(file: UploadFile = File()):
-    return ingest(file, garment_job, garment_folder, web_garment_folder)
+@app.post("/upload-garments", status_code=201, response_model=UploadResponse)
+def upload_garment(file: UploadFile = File(), user_id: str = Depends(current_user)):
+    return ingest(file, garment_job, db.garments, garment_folder, web_garment_folder, user_id)
 
-@app.post("/upload-palettes", status_code=201, response_model=UploadResponse, dependencies=auth_required)
-def upload_palette(file: UploadFile = File()):
-    return ingest(file, palette_job, color_palettes_folder, None)
+@app.post("/upload-palettes", status_code=201, response_model=UploadResponse)
+def upload_palette(file: UploadFile = File(), user_id: str = Depends(current_user)):
+    return ingest(file, palette_job, db.palettes, color_palettes_folder, None, user_id)
 
 @app.exception_handler(json.JSONDecodeError)
 def corrupt_data(request: Request, exc: json.JSONDecodeError):

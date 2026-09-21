@@ -1,63 +1,82 @@
 from __future__ import annotations
 
 import shutil
-import threading
-from closetllm.config import img_types
-from closetllm.extract import ExtractPhotoDetails, extract_colors, garment_job, palette_job, load_data, save_data
-from closetllm.color import validate_hex_value
-from closetllm.images import web_copy
 from pathlib import Path
-from fastapi import HTTPException, UploadFile
 
-# One lock for the whole process, shared by every request. FastAPI runs plain
-# `def` handlers in a threadpool, making two uploads run at once.
-_store_lock = threading.Lock()
+from fastapi import HTTPException, UploadFile
+from sqlalchemy import Table
+
+from closetllm import db
+from closetllm.color import validate_hex_value
+from closetllm.config import img_types
+from closetllm.extract import ExtractPhotoDetails, extract_colors
+from closetllm.images import web_copy
 
 def remove_broken_photo(dest: Path, web_folder: Path | None) -> None:
-    #delete photo + web copy to prevent crash (if JSON entry exists but garment doesnt)
+    #delete photo + web copy to prevent crash (leftovers with no row behind them)
     dest.unlink(missing_ok=True)
     if web_folder:
         (web_folder / dest.name).unlink(missing_ok=True)
 
 # INGEST() WILL:
-# 1. write the photo to garments/
-# 2. make the web copy in assets/garments/
-# 3. call Claude               <- try/except was only here
+# 1. refuse a filename this user already has
+# 2. write the photo to garments/ under a staging name
+# 3. call Claude
 # 4. check the list isn't empty
 # 5. validate each hex
-# 6. write the entry to garments.json
+# 6. make the web copy in assets/garments/, also staged
+# 7. insert the row                <- the unique constraint is the real 409
+# 8. move both staged files into place
+#
+# Nothing lands under its final name until the row is in. Every step before
+# that writes to "<name>.part", so a failure anywhere — and a 409 in
+# particular — cannot touch the photo a previous upload already saved.
 
-def ingest(file: UploadFile, job: ExtractPhotoDetails, folder: Path, web_folder: Path | None) -> dict:
+def ingest(
+    file: UploadFile,
+    job: ExtractPhotoDetails,
+    table: Table,                 # db.garments or db.palettes — replaces the json_data routing
+    folder: Path,
+    web_folder: Path | None,
+    user_id: str,
+) -> dict:
     file_name = Path(file.filename).name
-    if Path(file_name).suffix.lower() not in img_types:
-        raise HTTPException(status_code=415, detail="unsupported type")
-    dest = folder / file_name
-    if dest.exists():
+    suffix = Path(file_name).suffix.lower()
+    if suffix not in img_types:
+        raise HTTPException(status_code=415, detail=f"unsupported type {suffix or file_name}")
+
+    # A filename this user already has is refused before the model is paid for.
+    # add_photo's unique constraint is still the authority — two requests can
+    # both pass this check — but the common case costs a read, not a call.
+    if file_name in db.load_user_colors(table, user_id):
         raise HTTPException(status_code=409, detail=f"{file_name} already exists")
 
+    dest = folder / file_name
+    staged = folder / f".{file_name}.part"
     folder.mkdir(parents=True, exist_ok=True)
-    with dest.open("wb") as out: # wb = write binary
+    with staged.open("wb") as out: # wb = write binary
         shutil.copyfileobj(file.file, out)
-        
-    try:
-        if web_folder:
-            web_folder.mkdir(parents=True, exist_ok=True)
-            web_copy(dest, web_folder)
 
-        value = extract_colors(dest, job)[job.colors_key]
+    try:
+        value = extract_colors(staged, job)[job.colors_key]
         values = value if isinstance(value, list) else [value]
         if not values:
             raise HTTPException(status_code=502, detail=f"{file_name}: the model returned no colors")
 
         hexes = [validate_hex_value(v) for v in values]
-        
-        # Read-modify-write on a shared file — serialized. The lock stays off the
-        # model call above, which takes seconds and would queue every other upload.
-        with _store_lock:
-            data = load_data(job.json_data)
-            data[file_name] = hexes
-            save_data(data, job.json_data)
+
+        if web_folder:
+            web_folder.mkdir(parents=True, exist_ok=True)
+            # web_copy names its output after the file it is given, so handing it
+            # the staged photo stages the web copy under the same ".part" name.
+            web_copy(staged, web_folder)
+
+        db.add_photo(table, user_id, file_name, hexes, storage_key=file_name)
     except Exception:
-        remove_broken_photo(dest, web_folder)
+        remove_broken_photo(staged, web_folder)
         raise
+
+    staged.replace(dest)
+    if web_folder:
+        (web_folder / staged.name).replace(web_folder / file_name)
     return {"name": file_name, "colors": hexes}

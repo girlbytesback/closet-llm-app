@@ -29,7 +29,18 @@ export ANTHROPIC_API_KEY=your-key
 uv run closetllm clothes     # extract colors from garment photos
 uv run closetllm palettes    # extract colors from palette photos
 uv run closetllm match       # score the closet against palettes
-uv run pytest src/test       # unit tests
+uv run pytest                # the suite (the database is faked)
+```
+
+The tests never touch a real database: `src/test/helpers.py` has an in-memory
+stand-in for `closetllm.db`, and anything that tries to open a connection
+anyway fails. The trade, and what it costs, is written up in
+[docs/adr/0001-testing-the-database-layer.md](docs/adr/0001-testing-the-database-layer.md).
+The tests that do use Postgres are opt-in:
+
+```bash
+createdb closetllm_test
+TEST_DATABASE_URL=postgresql+psycopg:///closetllm_test uv run pytest -m postgres
 ```
 
 UI: `cd src/ui && npm install && npm run dev`
