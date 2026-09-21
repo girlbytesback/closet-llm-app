@@ -35,12 +35,10 @@ export default function SignIn({ wallpaper, mono }) {
     }
   }
 
-  // Silkscreen is a pixel font with wide glyphs and no descender room to spare,
-  // so everything here runs a size or two smaller than the Verdana it replaced.
   const field = {
-    width: "100%", boxSizing: "border-box", padding: "8px 9px",
+    width: "100%", boxSizing: "border-box", padding: "7px 9px",
     border: "1px solid #dfa4be", borderRadius: 4, background: "#fffafc",
-    fontFamily: mono, fontSize: 11, letterSpacing: ".02em", color: "#4a2b38",
+    fontFamily: "Verdana, Geneva, sans-serif", fontSize: 12, color: "#4a2b38",
   };
   const label = { display: "grid", gap: 4, fontFamily: mono, fontSize: 8.5, letterSpacing: ".06em", color: "#8a4467" };
 
@@ -48,7 +46,7 @@ export default function SignIn({ wallpaper, mono }) {
     <div style={{
       width: "100%", height: "100%", display: "grid", placeItems: "center",
       padding: 16, boxSizing: "border-box", ...wallpaper,
-      fontFamily: mono,
+      fontFamily: "Verdana, Geneva, sans-serif",
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap');
@@ -71,13 +69,13 @@ export default function SignIn({ wallpaper, mono }) {
           <span style={{ width: 12, height: 12, borderRadius: "50%", background: "radial-gradient(circle at 34% 30%,#ffb0a6,#e0574a)", border: "1px solid #b7473c" }} />
           <span style={{ width: 12, height: 12, borderRadius: "50%", background: "radial-gradient(circle at 34% 30%,#ffe08a,#e0a92f)", border: "1px solid #b98d25" }} />
           <span style={{ width: 12, height: 12, borderRadius: "50%", background: "radial-gradient(circle at 34% 30%,#b9f39a,#5fbd45)", border: "1px solid #4d9a38" }} />
-          <span style={{ margin: "0 auto", fontFamily: mono, fontSize: 10, fontWeight: 700, letterSpacing: ".05em", color: "#4a2b38" }}>♥ closet LLM ♥</span>
+          <span style={{ margin: "0 auto", fontSize: 12, fontWeight: 700, color: "#4a2b38" }}>♥ closet LLM ♥</span>
           <span style={{ width: 42 }} />
         </div>
 
         <form onSubmit={submit} style={{ display: "grid", gap: 12, padding: 18 }}>
           <div style={{ fontFamily: mono, fontSize: 13, letterSpacing: ".05em", color: "#4a2b38" }}>
-            {creating ? "make your closet" : "open your closet"}
+            {creating ? "make your digital closet today!" : "open your digital closet"}
           </div>
 
           <label style={label}>
@@ -95,7 +93,7 @@ export default function SignIn({ wallpaper, mono }) {
 
           {message && (
             <div role={message.kind === "error" ? "alert" : "status"} style={{
-              fontSize: 9, lineHeight: 1.7, letterSpacing: ".03em",
+              fontSize: 11, lineHeight: 1.5,
               color: message.kind === "error" ? "#a3264f" : "#6b3f52",
             }}>{message.text}</div>
           )}
@@ -112,7 +110,7 @@ export default function SignIn({ wallpaper, mono }) {
           <button className="signin-link" type="button"
             onClick={() => { setMode(creating ? "in" : "up"); setMessage(null); }}
             style={{ background: "none", border: "none", padding: 0, cursor: "pointer",
-              fontFamily: mono, fontSize: 9, letterSpacing: ".04em",
+              fontFamily: mono, fontSize: 9, letterSpacing: ".06em",
               color: "#c0468f", textDecoration: "underline", justifySelf: "center" }}>
             {creating ? "I already have an account" : "New here? Create an account"}
           </button>
