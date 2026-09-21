@@ -8,9 +8,8 @@ API serves what the CLI produced.
 import json
 
 import pytest
-from fastapi.testclient import TestClient
 
-from closetllm import api, cli, extract
+from closetllm import cli, extract
 from closetllm.color import default_cutoff, distance
 from closetllm.config import garment_url_prefix
 from closetllm.match import build_matches, compute_matches
@@ -47,7 +46,7 @@ PALETTE_REPLIES = [
 ]
 
 
-def test_extract_then_match_then_serve(closet, jobs_in_tmp, fake_model, capsys):
+def test_extract_then_match_then_serve(client, closet, jobs_in_tmp, fake_model, capsys):
     fake_model(*GARMENT_REPLIES, *PALETTE_REPLIES)
 
     extract.run_closet_colors(closet.garments)
@@ -57,7 +56,7 @@ def test_extract_then_match_then_serve(closet, jobs_in_tmp, fake_model, capsys):
     assert json.loads(jobs_in_tmp.garments.read_text())["sage_shirt.jpeg"] == [NEAR_SAGE]
     assert json.loads(jobs_in_tmp.palettes.read_text())["sage_palette.jpeg"] == [SAGE, NEAR_BLACK]
 
-    body = TestClient(api.app).get("/color-matches").json()
+    body = client.get("/color-matches").json()
 
     hits = body["palettes"]["sage_palette.jpeg"]["matches"][SAGE]
     assert [h["garment"] for h in hits] == ["sage_shirt.jpeg", "olive_pants.jpeg"]
@@ -130,7 +129,7 @@ def test_an_interrupted_extraction_resumes_where_it_stopped(
 
 
 def test_the_cli_runs_the_whole_thing_end_to_end(
-    closet, jobs_in_tmp, fake_model, monkeypatch, tmp_path, capsys
+    client, closet, jobs_in_tmp, fake_model, monkeypatch, tmp_path, capsys
 ):
     fake_model(*GARMENT_REPLIES, *PALETTE_REPLIES)
     out = tmp_path / "matches.json"
@@ -149,7 +148,7 @@ def test_the_cli_runs_the_whole_thing_end_to_end(
     assert "sage_shirt.jpeg" in printed
     assert written["meta"]["garment_count"] == 4
     assert written["meta"]["palette_count"] == 2
-    assert written == TestClient(api.app).get("/color-matches").json()
+    assert written == client.get("/color-matches").json()
 
 
 def test_the_cli_reports_a_missing_folder_without_a_traceback(monkeypatch, jobs_in_tmp, tmp_path):
@@ -170,30 +169,28 @@ def test_matching_before_extracting_is_a_clean_error(jobs_in_tmp, monkeypatch):
     assert "no color palettes saved yet" in str(exit_.value)
 
 
-def test_the_api_picks_up_data_written_after_it_started(closet, jobs_in_tmp, fake_model, capsys):
+def test_the_api_picks_up_data_written_after_it_started(client, closet, jobs_in_tmp, fake_model, capsys):
     # nothing is cached in module state, so a fresh extraction is visible to
     # the next request without a restart
-    http = TestClient(api.app)
-    assert http.get("/garments").status_code == 404
+    assert client.get("/garments").status_code == 404
 
     fake_model(*GARMENT_REPLIES)
     extract.run_closet_colors(closet.garments)
 
-    assert http.get("/garments").json()["count"] == 4
+    assert client.get("/garments").json()["count"] == 4
 
 
 def test_the_cutoff_travels_from_the_query_string_to_the_scores(
-    closet, jobs_in_tmp, fake_model, capsys
+    client, closet, jobs_in_tmp, fake_model, capsys
 ):
     fake_model(*GARMENT_REPLIES, *PALETTE_REPLIES)
     extract.run_closet_colors(closet.garments)
     extract.run_color_palettes(closet.palettes)
 
-    http = TestClient(api.app)
     olive_score = distance(SAGE, OLIVE)
 
-    just_under = http.get("/color-matches", params={"cutoff": olive_score - 0.01}).json()
-    just_over = http.get("/color-matches", params={"cutoff": olive_score + 0.01}).json()
+    just_under = client.get("/color-matches", params={"cutoff": olive_score - 0.01}).json()
+    just_over = client.get("/color-matches", params={"cutoff": olive_score + 0.01}).json()
 
     def names(body):
         return [h["garment"] for h in body["palettes"]["sage_palette.jpeg"]["matches"][SAGE]]

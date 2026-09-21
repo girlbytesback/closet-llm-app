@@ -4,10 +4,13 @@ from fastapi import HTTPException, Request
 from closetllm.config import jwt_secret
 
 def current_user(request: Request) -> str:
+    # Supabase sends the access token as "Authorization: Bearer <jwt>". Only the
+    # part after the scheme is the token, so the header is split rather than
+    # decoded whole — a missing or differently-schemed header is "not signed in".
     header = request.headers.get("authorization", "")
-    token = request.headers.get("Bearer ", "")
+    scheme, _, token = header.partition(" ")
 
-    if not token:
+    if scheme.lower() != "bearer" or not token:
         raise HTTPException(status_code=401, detail="user not signed in")
     try:
         claims = jwt.decode(
@@ -19,4 +22,3 @@ def current_user(request: Request) -> str:
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="bad token")
     return claims["sub"]
-    

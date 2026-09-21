@@ -21,8 +21,7 @@ from closetllm.config import (
     palette_hex_colors,
     palette_url_prefix,
     project_root,
-    web_garment_folder,
-    img_types
+    web_garment_folder
 )
 from closetllm.schemas import (
     GarmentsResponse,
@@ -33,7 +32,6 @@ from closetllm.schemas import (
 )
 from closetllm.auth import current_user
 from closetllm.ingest import ingest
-from pathlib import Path
 
 import json
 import logging
@@ -49,8 +47,13 @@ def health():
     # store has usable content is what /garments and /color-palettes report.
     return {"ok": True}
 
-@app.get("/stats", response_model=StatsResponse)
-def stats(user_id: str = Depends(current_user)):
+# Auth is declared as a route dependency rather than a handler argument: none of
+# these handlers read the user id, they only need the 401 that current_user
+# raises. The store is still single-user, so nothing below filters by owner yet.
+auth_required = [Depends(current_user)]
+
+@app.get("/stats", response_model=StatsResponse, dependencies=auth_required)
+def stats():
     # Readiness, not liveness: how much is actually in the store. Unlike
     # /garments an empty store is 200 with zeroes rather than a 404, because
     # "you have extracted nothing" is the answer here, not a missing resource.
@@ -62,23 +65,22 @@ def stats(user_id: str = Depends(current_user)):
         "palettes": len(palettes),
     }
 
-@app.get("/garments", response_model=GarmentsResponse)
-def get_garments(user_id: str = Depends(current_user)):
+@app.get("/garments", response_model=GarmentsResponse, dependencies=auth_required)
+def get_garments():
     garments = load_data(garment_hex_colors)
     if not garments:
         raise HTTPException(status_code=404, detail="no clothes saved yet")
     return {"count": len(garments), "garments": garments}
 
-@app.get("/color-palettes", response_model=PalettesResponse)
-def get_color_palettes(user_id: str = Depends(current_user)):
+@app.get("/color-palettes", response_model=PalettesResponse, dependencies=auth_required)
+def get_color_palettes():
     palettes = load_data(palette_hex_colors)
     if not palettes:
         raise HTTPException(status_code=404, detail="no palettes saved yet")
     return {"count": len(palettes), "palettes": palettes}
 
-@app.get("/color-matches", response_model=MatchesResponse)
+@app.get("/color-matches", response_model=MatchesResponse, dependencies=auth_required)
 def get_color_matches(
-    user_id: str = Depends(current_user),
     cutoff: float = Query(
         default_cutoff,
         ge=0,
@@ -92,12 +94,12 @@ def get_color_matches(
         raise HTTPException(status_code=404, detail=str(error))
     return build_matches(data, cutoff)
 
-@app.post("/upload-garments", status_code=201, response_model=UploadResponse)
-def upload_garment(file: UploadFile = File(), user_id: str = Depends(current_user)):
+@app.post("/upload-garments", status_code=201, response_model=UploadResponse, dependencies=auth_required)
+def upload_garment(file: UploadFile = File()):
     return ingest(file, garment_job, garment_folder, web_garment_folder)
 
-@app.post("/upload-palettes", status_code=201, response_model=UploadResponse)
-def upload_palette(file: UploadFile = File(), user_id: str = Depends(current_user)):
+@app.post("/upload-palettes", status_code=201, response_model=UploadResponse, dependencies=auth_required)
+def upload_palette(file: UploadFile = File()):
     return ingest(file, palette_job, color_palettes_folder, None)
 
 @app.exception_handler(json.JSONDecodeError)

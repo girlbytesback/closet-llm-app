@@ -20,6 +20,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent))
 
 from closetllm import api, extract, match
+from closetllm.auth import current_user
 from helpers import (  # noqa: F401
     FakeMessages,
     FakeResponse,
@@ -78,9 +79,17 @@ def seeded(data_paths):
 
 @pytest.fixture
 def client(data_paths):
+    """A signed-in client, so no test needs a real Supabase token.
+
+    dependency_overrides swaps the Depends target for the lifetime of the
+    fixture; the clear() after the yield puts the real dependency back, which is
+    what the auth tests rely on to exercise it.
+    """
     from fastapi.testclient import TestClient
 
-    return TestClient(api.app)
+    api.app.dependency_overrides[current_user] = lambda: "test-user"
+    yield TestClient(api.app)
+    api.app.dependency_overrides.clear()
 
 
 @pytest.fixture
