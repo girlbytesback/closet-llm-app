@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { supabase, useSession } from "./supabase";
+import { authedFetch } from "./api";
+import SignIn from "./SignIn";
+
 import heartButton from "./assets/icon-heart-button.png";
 import flowerButton from "./assets/icon-flower-button.png";
 
