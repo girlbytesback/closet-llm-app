@@ -25,14 +25,13 @@ from closetllm.config import (
 )
 from closetllm.schemas import (
     GarmentsResponse,
-    MatchesResponse,
     PalettesResponse,
     StatsResponse,
     UploadResponse
 )
 from closetllm.auth import current_user
 from closetllm.ingest import ingest
-from closetllm import db
+from closetllm import db, storage
 
 import json
 import logging
@@ -82,13 +81,26 @@ def get_color_palettes(user_id: str = Depends(current_user)):
         raise HTTPException(status_code=404, detail="no palettes saved yet")
     return {"count": len(palettes), "palettes": palettes}
 
-@app.get("/color-matches", response_model=MatchesResponse)
-def get_color_matches(cutoff: float = Query(default_cutoff, ge=0, le=100), user_id: str = Depends(current_user)):
+@app.get("/color-matches")
+def color_matches(cutoff: float = default_cutoff, user_id: str = Depends(current_user)) -> dict:
+    # 1. load this user's colors from the db
     garments = db.load_user_colors(db.garments, user_id)
     palettes = db.load_user_colors(db.palettes, user_id)
-    if not garments or not palettes:
-        raise HTTPException(status_code=404, detail="upload some clothes and a palette first")
-    return build_matches(compute_matches(garments, palettes, cutoff), cutoff)
+
+    # 2. the color math (pure; doesn't know about db or storage)
+    doc = build_matches(compute_matches(garments, palettes, cutoff), cutoff)
+
+    # 3. swap in photo links from the bucket
+    garment_keys = db.load_user_keys(db.garments, user_id)     # {filename: key}
+    palette_keys = db.load_user_keys(db.palettes, user_id)
+    links = storage.signed_urls(list(garment_keys.values()) + list(palette_keys.values()))
+
+    for name, garment in doc["garments"].items():
+        garment["src"] = links.get(garment_keys.get(name))
+    for name, palette in doc["palettes"].items():
+        palette["src"] = links.get(palette_keys.get(name))
+
+    return doc
 
 @app.post("/upload-garments", status_code=201, response_model=UploadResponse)
 def upload_garment(file: UploadFile = File(), user_id: str = Depends(current_user)):

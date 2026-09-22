@@ -1,4 +1,8 @@
+from __future__ import annotations
 from fastapi import HTTPException
+
+import uuid
+
 from sqlalchemy import (
     ARRAY,
     Column,

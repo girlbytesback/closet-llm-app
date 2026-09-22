@@ -73,5 +73,5 @@ def ingest(file: UploadFile, job: ExtractPhotoDetails, table: Table,
         except Exception:
             db.delete_photo(table, user_id, photo_id)
             raise
-        
-    return {"name": file_name, "colors": hexes}
+
+    return {"name": file_name, "colors": hexes}    
