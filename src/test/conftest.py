@@ -20,10 +20,11 @@ import pytest
 # so `from helpers import ...` works from any test subdirectory
 sys.path.insert(0, str(Path(__file__).parent))
 
-from closetllm import api, db, extract, match
+from closetllm import api, db, extract, match, storage
 from closetllm.auth import current_user
 from helpers import (  # noqa: F401
     FakeDB,
+    FakeStorage,
     FakeMessages,
     FakeResponse,
     FakeBlock,
@@ -112,6 +113,22 @@ def fake_db(monkeypatch):
 
 
 @pytest.fixture
+def fake_storage(monkeypatch):
+    """Swap the three storage functions for an in-memory bucket.
+
+    Same trick as fake_model and fake_db, and for the same reason: the real
+    ones talk to Supabase, so without this an upload test would put a photo in
+    the bucket the actual closet lives in. Every caller goes through the module
+    (`storage.put`), so patching the attributes here redirects all of them.
+    """
+    fake = FakeStorage()
+    monkeypatch.setattr(storage, "put", fake.put)
+    monkeypatch.setattr(storage, "delete", fake.delete)
+    monkeypatch.setattr(storage, "signed_urls", fake.signed_urls)
+    return fake
+
+
+@pytest.fixture
 def client(data_paths):
     """A signed-in client, so no test needs a real Supabase token.
 
@@ -194,24 +211,13 @@ def jobs_in_tmp(data_paths, monkeypatch):
 
 
 @pytest.fixture
-def upload_paths(data_paths, fake_db, monkeypatch):
+def upload_paths(data_paths, fake_db, fake_storage):
     """Redirect everything an upload touches away from the real thing.
 
-    Two halves, because an upload writes to two places. The photo folders are
-    bound by name in api.py at import, the same way the stores are, so an
-    upload would otherwise drop a real photo into garments/; they are pointed
-    at tmp_path here. The row goes to the database, so fake_db is pulled in
-    too — and returned as `.db`, which is where these tests assert.
+    Two halves, because an upload writes to two places: a row and a photo. No
+    folders to redirect any more — ingest stages the photo in a temp directory
+    and uploads it, so the only things to fake are the database and the bucket.
+    Both are returned, as `.db` and `.storage`, which is where these tests
+    assert.
     """
-    root = data_paths.root
-    folders = SimpleNamespace(
-        garments=root / "garments",
-        web_garments=root / "assets" / "garments",
-        palettes=root / "color-palettes",
-        db=fake_db,
-    )
-
-    monkeypatch.setattr(api, "garment_folder", folders.garments)
-    monkeypatch.setattr(api, "web_garment_folder", folders.web_garments)
-    monkeypatch.setattr(api, "color_palettes_folder", folders.palettes)
-    return folders
+    return SimpleNamespace(db=fake_db, storage=fake_storage)

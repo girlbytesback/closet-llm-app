@@ -19,7 +19,7 @@ from starlette.datastructures import UploadFile
 
 from closetllm import db
 from closetllm.extract import garment_job, palette_job
-from closetllm.ingest import ingest, remove_broken_photo
+from closetllm.ingest import ingest
 
 from helpers import TEST_USER as USER, jpeg_bytes
 
@@ -490,54 +490,3 @@ def test_a_failed_upload_does_not_disturb_the_photos_already_saved(
 
     assert (folders.photos / "old.jpeg").exists()
     assert fake_db.garments() == {"old.jpeg": ["#123456"]}
-
-
-# ------------------------------------------------------- remove_broken_photo
-
-def test_remove_broken_photo_deletes_the_photo(tmp_path):
-    photo = tmp_path / "shirt.jpeg"
-    photo.write_bytes(jpeg_bytes())
-
-    remove_broken_photo(photo, None)
-
-    assert not photo.exists()
-
-
-def test_remove_broken_photo_deletes_the_web_copy_under_the_same_name(tmp_path):
-    photo = tmp_path / "garments" / "shirt.jpeg"
-    web = tmp_path / "assets"
-    photo.parent.mkdir()
-    web.mkdir()
-    photo.write_bytes(jpeg_bytes())
-    (web / "shirt.jpeg").write_bytes(jpeg_bytes())
-
-    remove_broken_photo(photo, web)
-
-    assert not photo.exists()
-    assert not (web / "shirt.jpeg").exists()
-
-
-def test_remove_broken_photo_tolerates_a_photo_that_was_never_written(tmp_path):
-    # the caller does not know how far it got, so both deletes have to be safe
-    remove_broken_photo(tmp_path / "never.jpeg", None)
-
-
-def test_remove_broken_photo_tolerates_a_missing_web_copy(tmp_path):
-    # the common case: the failure happened before web_copy ran at all
-    photo = tmp_path / "shirt.jpeg"
-    photo.write_bytes(jpeg_bytes())
-
-    remove_broken_photo(photo, tmp_path / "assets")
-
-    assert not photo.exists()
-
-
-def test_remove_broken_photo_leaves_the_other_photos_alone(tmp_path):
-    keep = tmp_path / "keep.jpeg"
-    drop = tmp_path / "drop.jpeg"
-    keep.write_bytes(jpeg_bytes())
-    drop.write_bytes(jpeg_bytes())
-
-    remove_broken_photo(drop, None)
-
-    assert keep.exists()

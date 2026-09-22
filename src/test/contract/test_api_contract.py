@@ -8,7 +8,6 @@ tested there — these tests only care about the envelope.
 import pytest
 
 from closetllm.color import default_cutoff
-from closetllm.config import garment_url_prefix, palette_url_prefix
 from closetllm.extract import save_data
 
 from conftest import NEAR_BLACK, SAGE, SAMPLE_GARMENTS, SAMPLE_PALETTES
@@ -178,16 +177,18 @@ def test_matches_is_404_when_only_palettes_exist(client, data_paths):
     assert "no clothes saved yet" in response.json()["detail"]
 
 
-def test_every_garment_entry_carries_colors_and_a_src(client, seeded):
+def test_every_garment_entry_carries_colors_and_a_src(client, seeded, fake_storage):
+    # "src" is a signed bucket link, minted per request — the UI never builds a
+    # photo URL itself, it renders whatever this hands it.
     for entry in client.get("/color-matches").json()["garments"].values():
         assert set(entry) == {"colors", "src"}
-        assert entry["src"].startswith(garment_url_prefix + "/")
+        assert entry["src"] is None or entry["src"].startswith("https://")
 
 
-def test_every_palette_entry_carries_colors_a_src_and_matches(client, seeded):
+def test_every_palette_entry_carries_colors_a_src_and_matches(client, seeded, fake_storage):
     for entry in client.get("/color-matches").json()["palettes"].values():
         assert set(entry) == {"colors", "src", "matches"}
-        assert entry["src"].startswith(palette_url_prefix + "/")
+        assert entry["src"] is None or entry["src"].startswith("https://")
 
 
 def test_a_palette_has_one_match_list_per_colour(client, seeded):

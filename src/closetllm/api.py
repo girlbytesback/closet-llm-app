@@ -14,14 +14,9 @@ from closetllm.color import default_cutoff
 from closetllm.extract import load_data, palette_job, garment_job
 from closetllm.match import build_matches, compute_matches
 from closetllm.config import (
-    color_palettes_folder,
-    garment_folder,
     garment_hex_colors,
-    garment_url_prefix,
     palette_hex_colors,
-    palette_url_prefix,
     project_root,
-    web_garment_folder
 )
 from closetllm.schemas import (
     GarmentsResponse,
@@ -120,30 +115,22 @@ def corrupt_data(request: Request, exc: json.JSONDecodeError):
     )
 
 
-# ── Static assets ──────────────────────────────────────────────────────────
-# Everything below is registered AFTER the routes above on purpose: Starlette
-# matches in registration order, and a mount swallows every path beneath it.
-# A mount at "/" registered earlier would shadow every endpoint.
+# ── Static assets ─────────────────────────────────────────────────────────
+# Photos are not served from this process any more: they live in the storage
+# bucket, and /color-matches hands the UI a signed link per photo. The React
+# app is the only thing left to mount.
 #
-# The exists() guards matter because StaticFiles checks its directory when it
-# is constructed — at import time. Without them, importing this module fails
-# anywhere the folders are absent, which includes CI and the test suite.
-
-# The mount paths come from config, not string literals: match.py builds every
-# "src" in the matches document from those same two values, so a literal here
-# that drifts from config serves 404s for photos the UI is already asking for.
+# It is registered AFTER the routes above on purpose: Starlette matches in
+# registration order, and a mount swallows every path beneath it — a mount at
+# "/" registered earlier would shadow every endpoint.
 #
-# Garment photos are served from the web-sized copies, not the originals: the
-# multi-MB originals stay local and only feed offline extraction.
-if web_garment_folder.exists():
-    app.mount(garment_url_prefix, StaticFiles(directory=web_garment_folder), name="garments")
-
-if color_palettes_folder.exists():
-    app.mount(palette_url_prefix, StaticFiles(directory=color_palettes_folder), name="palettes")
-
-# The built React app. html=True serves index.html at "/", which is what makes
-# this a single-origin deployment: one process answers HTML, images and JSON,
-# so there is no CORS in production. Registered LAST because it is the catch-all.
+# The exists() guard matters because StaticFiles checks its directory when it
+# is constructed, at import time. Without it, importing this module fails
+# anywhere dist/ is absent, which includes CI and the test suite.
+#
+# html=True serves index.html at "/", which is what makes this a single-origin
+# deployment: one process answers both the HTML and the JSON, so there is no
+# CORS in production.
 ui_dist = project_root / "src/ui/dist"
 if ui_dist.exists():
     app.mount("/", StaticFiles(directory=ui_dist, html=True), name="ui")

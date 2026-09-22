@@ -5,7 +5,6 @@ import json
 import pytest
 
 from closetllm.color import default_cutoff, distance
-from closetllm.config import garment_url_prefix
 from closetllm.match import (
     build_matches,
     compute_matches,
@@ -99,19 +98,12 @@ def test_build_matches_lists_every_garment_not_just_the_matching_ones(seeded):
     assert set(doc["garments"]) == set(SAMPLE_GARMENTS)
 
 
-def test_a_garment_carries_its_colours_and_an_image_url(seeded):
+def test_a_garment_carries_only_its_colours(seeded):
+    # no "src": build_matches is the colour maths and does not know where a
+    # photo lives. api.py adds the key from the signed bucket links.
     doc = build_matches(compute_matches(), default_cutoff)
 
-    assert doc["garments"]["sage_shirt.jpeg"] == {
-        "colors": [NEAR_SAGE],
-        "src": f"{garment_url_prefix}/sage_shirt.jpeg",
-    }
-
-
-def test_a_space_in_a_filename_is_percent_encoded(seeded):
-    # an unquoted space breaks the <img src> in the browser
-    doc = build_matches(compute_matches(), default_cutoff)
-    assert doc["garments"]["pink dress.jpeg"]["src"] == f"{garment_url_prefix}/pink%20dress.jpeg"
+    assert doc["garments"]["sage_shirt.jpeg"] == {"colors": [NEAR_SAGE]}
 
 
 def test_a_palette_carries_its_colours_in_order(seeded):

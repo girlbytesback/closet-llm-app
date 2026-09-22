@@ -28,6 +28,14 @@ node_modules/
 .coverage
 htmlcov/
 
+# Photos — local-only now. Uploads go straight to the storage bucket, and the
+# UI renders signed links from it, so nothing in here needs to ship with a
+# deploy. garments/ and color-palettes/ feed the offline extraction CLI;
+# assets/garments/ holds the web-sized copies scripts/resize_imgs.py makes.
+garments/
+assets/garments/
+color-palettes/
+
 # macOS
 .DS_Store
 

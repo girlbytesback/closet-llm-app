@@ -15,19 +15,14 @@ from closetllm.images import web_copy
 
 CONTENT_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
 
-def remove_broken_photo(dest: Path, web_folder: Path | None) -> None:
-    #delete photo + web copy to prevent crash (if JSON entry exists but garment doesnt)
-    dest.unlink(missing_ok=True)
-    if web_folder:
-        (web_folder / dest.name).unlink(missing_ok=True)
-
 # INGEST() WILL:
-# 1. write the photo to garments/
-# 2. make the web copy in assets/garments/
-# 3. call Claude               <- try/except was only here
-# 4. check the list isn't empty
-# 5. validate each hex
-# 6. write the entry to garments.json
+# 1. check the file type
+# 2. save the upload into a temp folder, which is emptied on the way out —
+#    nothing an upload writes survives locally, so there is no orphan to sweep
+# 3. call Claude, then check the list isn't empty and validate each hex
+# 4. pick what to upload (the web copy for garments, the original otherwise)
+# 5. insert the row  (a duplicate stops here)
+# 6. upload to the bucket, undoing the row if that fails
 
 def ingest(file: UploadFile, job: ExtractPhotoDetails, table: Table,
            user_id: str, needs_web_copy: bool) -> dict:

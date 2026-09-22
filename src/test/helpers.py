@@ -104,6 +104,42 @@ class FakeDB:
         return self.load_user_colors(db.palettes, user_id)
 
 
+class FakeStorage:
+    """An in-memory stand-in for the three functions in closetllm.storage.
+
+    The real ones talk to the Supabase bucket the actual closet lives in, so
+    every test that uploads goes through this instead. Keys are stored the way
+    the bucket does — one flat namespace, "<user_id>/<filename>" — and put()
+    refuses a key that is already taken, which is what the real upload does.
+
+    signed_urls() returns a made-up link per key so a test can tell one photo's
+    URL from another's; it deliberately skips keys that were never put, because
+    that is how the real call behaves and the endpoints have to cope with a row
+    whose photo is missing.
+    """
+
+    def __init__(self):
+        self.files: dict[str, bytes] = {}
+        self.content_types: dict[str, str] = {}
+        self.deleted: list[str] = []          # every delete, for assertions
+
+    # ------------------------------------------- the storage module's interface
+
+    def put(self, key: str, data: bytes, content_type: str) -> None:
+        if key in self.files:
+            raise FileExistsError(key)
+        self.files[key] = bytes(data)
+        self.content_types[key] = content_type
+
+    def delete(self, key: str) -> None:
+        self.deleted.append(key)
+        self.files.pop(key, None)
+        self.content_types.pop(key, None)
+
+    def signed_urls(self, keys: list[str]) -> dict[str, str]:
+        return {key: f"https://fake.storage/{key}?token=test" for key in keys if key in self.files}
+
+
 class RefusingEngine:
     """Stands in for db.engine everywhere the fake is not installed.
 

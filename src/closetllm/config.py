@@ -18,7 +18,8 @@ data_dir = Path(os.environ.get("CLOSETLLM_DATA_DIR", project_root / "data"))
 palette_hex_colors = data_dir / "colors.json"
 garment_hex_colors = data_dir / "garments.json"
 
-# Photo source folders — also overridable, same reasoning.
+# Photo source folders — also overridable, same reasoning. Read by the CLI,
+# extract.py's defaults and the scripts; the API never touches them.
 garment_folder = Path(os.environ.get("CLOSETLLM_GARMENT_DIR", project_root / "garments"))
 color_palettes_folder = Path(os.environ.get("CLOSETLLM_PALETTE_DIR", project_root / "color-palettes"))
 
@@ -30,18 +31,12 @@ log_level = os.environ.get("CLOSETLLM_LOG_LEVEL", "INFO")
 # from — it's a build input for the frontend, so it lives with the frontend.
 palette_matches = project_root / "src/ui/src/data/matches.json"
 
-# Where the browser will find the photos. Python owns these so the UI never has
-# to know how the images get served — it just renders the src it's handed.
-# FastAPI mounts these prefixes onto the photo folders (see api.py); in dev,
-# Vite proxies /img straight through to FastAPI so both environments match.
-garment_url_prefix = "/img/garments"
-palette_url_prefix = "/img/color-palettes"
-
 img_types = {".jpeg", ".jpg", ".png"}
 
 # Web-sized copies of the garment photos, written by scripts/resize_imgs.py.
-# The originals in garments/ stay local; this folder is committed so a git-based
-# deploy ships the images. 600px is plenty — the UI draws them at ~70px.
+# Local-only, like garments/ itself: uploads go straight to the storage bucket
+# now, so nothing here is served. It is what scripts/import_original_photos.py
+# reads when backfilling the bucket. 600px is plenty — the UI draws them at ~70px.
 web_garment_folder = Path(os.environ.get("CLOSETLLM_WEB_GARMENT_DIR", project_root / "assets/garments"))
 web_max_edge = 600
 

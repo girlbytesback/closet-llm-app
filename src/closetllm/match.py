@@ -7,7 +7,6 @@ compute_matches without dragging the printing along with it.
 
 from pathlib import Path
 from typing import Optional
-from urllib.parse import quote
 
 from closetllm.color import (
     default_cutoff,
@@ -16,8 +15,6 @@ from closetllm.color import (
 from closetllm.config import (
     palette_hex_colors,
     garment_hex_colors,
-    garment_url_prefix,
-    palette_url_prefix,
 )
 from closetllm.extract import load_data, save_data
 
@@ -43,19 +40,17 @@ def build_matches(results: dict, cutoff: float) -> dict:
             "garment_count": len(garments),
             "palette_count": len(results),
         },
+        # No "src" here: this function is the colour maths, and it has no way to
+        # know where a photo lives. api.py fills the key in from the signed
+        # bucket links before the document goes out.
         "garments": {
-            name: {
-                "colors": colors,
-                # quoted so any spaces or odd characters in a filename survive the URL
-                "src": f"{garment_url_prefix}/{quote(name)}",
-            }
+            name: {"colors": colors}
             for name, colors in sorted(garments.items())
         },
         "palettes": {
             name: {
                 # the inner keys already are the palette's colors, in order
                 "colors": list(by_color),
-                "src": f"{palette_url_prefix}/{quote(name)}",
                 "matches": {
                     color: [
                         # full float precision is noise on a number whose useful

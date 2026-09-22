@@ -2,18 +2,19 @@
 
 src/ui/src/closetLLM.jsx reads, specifically:
 
-    data.palettes[file].src
     data.palettes[file].colors           -> mapped to one group per swatch
     data.palettes[file].matches[hex]     -> [{garment, score}]
-    data.garments[hit.garment].src
 
 Anything that breaks one of those lines belongs in this file.
+
+The two `.src` lines the UI also reads are not here: build_matches does not
+emit them. api.py fills them in from the signed bucket links, so the tests for
+them live in test_api_contract.py.
 """
 
 import json
 
 from closetllm.color import default_cutoff
-from closetllm.config import garment_url_prefix, palette_url_prefix
 from closetllm.match import build_matches, compute_matches
 
 from conftest import SAGE
@@ -53,19 +54,6 @@ def test_every_matched_garment_resolves_in_the_garments_map(seeded):
         for hits in palette["matches"].values():
             for hit in hits:
                 assert hit["garment"] in doc["garments"]
-
-
-def test_image_urls_use_the_configured_prefixes(seeded):
-    doc = document(seeded)
-
-    assert all(g["src"].startswith(garment_url_prefix + "/") for g in doc["garments"].values())
-    assert all(p["src"].startswith(palette_url_prefix + "/") for p in doc["palettes"].values())
-
-
-def test_image_urls_are_url_safe(seeded):
-    # public/ symlinks the photo folders, so the browser fetches these verbatim
-    for entry in document(seeded)["garments"].values():
-        assert " " not in entry["src"]
 
 
 def test_scores_are_plain_numbers_the_ui_can_print(seeded):
