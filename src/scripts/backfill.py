@@ -3,7 +3,7 @@ import mimetypes
 from closetllm import db, storage
 from closetllm.config import color_palettes_folder, web_garment_folder
 
-user_id = "your-uuid-here"
+user_id = "5c4e7f70-36bd-4d94-9ca8-dda29584f246"
 
 
 def backfill(table, folder):
