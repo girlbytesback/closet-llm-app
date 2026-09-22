@@ -68,34 +68,27 @@ def stats():
         "palettes": len(palettes),
     }
 
-@app.get("/garments", response_model=GarmentsResponse, dependencies=auth_required)
-def get_garments():
-    garments = load_data(garment_hex_colors)
+@app.get("/garments", response_model=GarmentsResponse)
+def get_garments(user_id: str = Depends(current_user)):
+    garments = db.load_user_colors(db.garments, user_id)
     if not garments:
         raise HTTPException(status_code=404, detail="no clothes saved yet")
     return {"count": len(garments), "garments": garments}
 
 @app.get("/color-palettes", response_model=PalettesResponse, dependencies=auth_required)
-def get_color_palettes():
-    palettes = load_data(palette_hex_colors)
+def get_color_palettes(user_id: str = Depends(current_user)):
+    palettes = db.load_user_colors(db.garments, user_id)
     if not palettes:
         raise HTTPException(status_code=404, detail="no palettes saved yet")
     return {"count": len(palettes), "palettes": palettes}
 
-@app.get("/color-matches", response_model=MatchesResponse, dependencies=auth_required)
-def get_color_matches(
-    cutoff: float = Query(
-        default_cutoff,
-        ge=0,
-        le=100,
-        description="Maximum ΔE (CIEDE2000) for a garment to count as a match.",
-    ),
-):
-    try:
-        data = compute_matches(cutoff)
-    except FileNotFoundError as error:
-        raise HTTPException(status_code=404, detail=str(error))
-    return build_matches(data, cutoff)
+@app.get("/color-matches", response_model=MatchesResponse)
+def get_color_matches(cutoff: float = Query(default_cutoff, ge=0, le=100), user_id: str = Depends(current_user)):
+    garments = db.load_user_colors(db.garments, user_id)
+    palettes = db.load_user_colors(db.palettes, user_id)
+    if not garments or not palettes:
+        raise HTTPException(status_code=404, detail="upload some clothes and a palette first")
+    return build_matches(compute_matches(garments, palettes, cutoff), cutoff)
 
 @app.post("/upload-garments", status_code=201, response_model=UploadResponse)
 def upload_garment(file: UploadFile = File(), user_id: str = Depends(current_user)):

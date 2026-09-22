@@ -21,7 +21,7 @@ from closetllm.config import (
 )
 from closetllm.extract import load_data, save_data
 
-def compute_matches(cutoff: float = default_cutoff) -> dict:
+def compute_matches(garments: dict, palettes: dict, cutoff: float) -> dict:
     color_palettes = load_data(palette_hex_colors)
     garments = load_data(garment_hex_colors)
 
