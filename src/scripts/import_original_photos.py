@@ -27,3 +27,5 @@ for table, prefix, folder in (
         with db.engine.begin() as conn:
             conn.execute(update(table).where(table.c.id == row_id).values(storage_key=key))
         print(f"{prefix}: {filename} -> {key}")
+
+

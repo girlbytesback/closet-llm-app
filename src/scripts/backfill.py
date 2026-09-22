@@ -1,0 +1,19 @@
+import mimetypes
+
+from closetllm import db, storage
+from closetllm.config import color_palettes_folder, web_garment_folder
+
+user_id = "your-uuid-here"
+
+
+def backfill(table, folder):
+    keys = db.load_user_keys(table, user_id)       # {filename: storage_key}
+    for filename, key in keys.items():
+        local = folder / filename
+        content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+        storage.put(key, local.read_bytes(), content_type)
+        print("uploaded", key)
+
+
+backfill(db.garments, web_garment_folder)
+backfill(db.palettes, color_palettes_folder)

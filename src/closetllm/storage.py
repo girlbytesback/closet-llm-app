@@ -1,3 +1,6 @@
+import mimetypes
+from pathlib import Path
+
 from supabase import create_client
 
 from closetllm.config import supabase_secret_key, supabase_url
@@ -10,6 +13,11 @@ _bucket = _client.storage.from_("photos")
 # re-fetches /color-matches on reload, which mints fresh links.
 LINK_SECONDS = 3600
 
+
+def put_file(key: str, path: Path) -> None:
+    """Store the file at path under key; content type guessed from the name."""
+    content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    put(key, path.read_bytes(), content_type)
 
 def put(key: str, data: bytes, content_type: str) -> None:
     """Store bytes under key. Fails if the key already exists."""
