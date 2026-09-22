@@ -1,82 +1,72 @@
 from __future__ import annotations
-
 import shutil
+import tempfile
+import uuid
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
 from sqlalchemy import Table
 
-from closetllm import db
+from closetllm import db, storage
 from closetllm.color import validate_hex_value
 from closetllm.config import img_types
 from closetllm.extract import ExtractPhotoDetails, extract_colors
 from closetllm.images import web_copy
 
+CONTENT_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
+
 def remove_broken_photo(dest: Path, web_folder: Path | None) -> None:
-    #delete photo + web copy to prevent crash (leftovers with no row behind them)
+    #delete photo + web copy to prevent crash (if JSON entry exists but garment doesnt)
     dest.unlink(missing_ok=True)
     if web_folder:
         (web_folder / dest.name).unlink(missing_ok=True)
 
 # INGEST() WILL:
-# 1. refuse a filename this user already has
-# 2. write the photo to garments/ under a staging name
-# 3. call Claude
+# 1. write the photo to garments/
+# 2. make the web copy in assets/garments/
+# 3. call Claude               <- try/except was only here
 # 4. check the list isn't empty
 # 5. validate each hex
-# 6. make the web copy in assets/garments/, also staged
-# 7. insert the row                <- the unique constraint is the real 409
-# 8. move both staged files into place
-#
-# Nothing lands under its final name until the row is in. Every step before
-# that writes to "<name>.part", so a failure anywhere — and a 409 in
-# particular — cannot touch the photo a previous upload already saved.
+# 6. write the entry to garments.json
 
 def ingest(
     file: UploadFile,
     job: ExtractPhotoDetails,
-    table: Table,                 # db.garments or db.palettes — replaces the json_data routing
-    folder: Path,
-    web_folder: Path | None,
+    table: Table,
+    prefix: str,          # "garments" or "palettes" — the first part of the key
+    shrink: bool,         # True for garments: store the small web copy, not the original
     user_id: str,
 ) -> dict:
     file_name = Path(file.filename).name
     suffix = Path(file_name).suffix.lower()
     if suffix not in img_types:
-        raise HTTPException(status_code=415, detail=f"unsupported type {suffix or file_name}")
+        raise HTTPException(status_code=415, detail=f"unsupported type {suffix}")
 
-    # A filename this user already has is refused before the model is paid for.
-    # add_photo's unique constraint is still the authority — two requests can
-    # both pass this check — but the common case costs a read, not a call.
-    if file_name in db.load_user_colors(table, user_id):
-        raise HTTPException(status_code=409, detail=f"{file_name} already exists")
+    with tempfile.TemporaryDirectory() as tmp:          # deleted when this block exits, success or not
+        work = Path(tmp)
+        original = work / file_name
+        with original.open("wb") as out:
+            shutil.copyfileobj(file.file, out)
 
-    dest = folder / file_name
-    staged = folder / f".{file_name}.part"
-    folder.mkdir(parents=True, exist_ok=True)
-    with staged.open("wb") as out: # wb = write binary
-        shutil.copyfileobj(file.file, out)
-
-    try:
-        value = extract_colors(staged, job)[job.colors_key]
+        value = extract_colors(original, job)[job.colors_key]
         values = value if isinstance(value, list) else [value]
         if not values:
             raise HTTPException(status_code=502, detail=f"{file_name}: the model returned no colors")
-
         hexes = [validate_hex_value(v) for v in values]
 
-        if web_folder:
-            web_folder.mkdir(parents=True, exist_ok=True)
-            # web_copy names its output after the file it is given, so handing it
-            # the staged photo stages the web copy under the same ".part" name.
-            web_copy(staged, web_folder)
+        if shrink:
+            web_copy(original, work / "web")
+            stored = work / "web" / file_name
+        else:
+            stored = original
 
-        db.add_photo(table, user_id, file_name, hexes, storage_key=file_name)
-    except Exception:
-        remove_broken_photo(staged, web_folder)
-        raise
+        photo_id = uuid.uuid4()
+        key = f"{prefix}/{user_id}/{photo_id}{suffix}"
+        db.add_photo(table, user_id, file_name, hexes, storage_key=key, photo_id=photo_id)   # 409 here
 
-    staged.replace(dest)
-    if web_folder:
-        (web_folder / staged.name).replace(web_folder / file_name)
+        try:
+            storage.put(key, stored.read_bytes(), CONTENT_TYPES[suffix])
+        except Exception:
+            db.delete_photo(table, photo_id)             # undo the row so a retry isn't a 409
+            raise
     return {"name": file_name, "colors": hexes}
