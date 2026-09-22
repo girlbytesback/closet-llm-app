@@ -92,11 +92,12 @@ def get_color_matches(cutoff: float = Query(default_cutoff, ge=0, le=100), user_
 
 @app.post("/upload-garments", status_code=201, response_model=UploadResponse)
 def upload_garment(file: UploadFile = File(), user_id: str = Depends(current_user)):
-    return ingest(file, garment_job, db.garments, garment_folder, web_garment_folder, user_id)
+    return ingest(file, garment_job, db.garments, "garments", True, user_id)
+
 
 @app.post("/upload-palettes", status_code=201, response_model=UploadResponse)
 def upload_palette(file: UploadFile = File(), user_id: str = Depends(current_user)):
-    return ingest(file, palette_job, db.palettes, color_palettes_folder, None, user_id)
+    return ingest(file, palette_job, db.palettes, "palettes", False, user_id)
 
 @app.exception_handler(json.JSONDecodeError)
 def corrupt_data(request: Request, exc: json.JSONDecodeError):

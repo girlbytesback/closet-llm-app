@@ -49,14 +49,32 @@ def load_user_colors(table: Table, user_id: str) -> dict[str, list[str]]:
         rows = conn.execute(query)
         return {filename: colors for filename, colors in rows}
 
-
-def add_photo(table: Table, user_id: str, filename: str, colors: list[str], storage_key: str) -> None:
-    """Insert one row. Raises 409 if this user already has this filename."""
-    row = insert(table).values(
-        user_id=user_id, filename=filename, colors=colors, storage_key=storage_key
-    )
+def add_photo(
+    table: Table,
+    user_id: str,
+    filename: str,
+    colors: list[str],
+    storage_key: str,
+    photo_id: uuid.UUID | None = None,
+) -> None:
+    """Insert one row. Raises DuplicatePhoto if this user already has this filename."""
+    values = dict(user_id=user_id, filename=filename, colors=colors, storage_key=storage_key)
+    if photo_id is not None:
+        values["id"] = photo_id
     try:
-        with engine.begin() as conn:               # transaction: commits on clean exit, rolls back on exception
-            conn.execute(row)
+        with engine.begin() as conn:
+            conn.execute(insert(table).values(**values))
     except IntegrityError:
-        raise HTTPException(status_code=409, detail=f"{filename} already exists")
+        raise DuplicatePhoto(filename)
+
+
+def delete_photo(table: Table, photo_id) -> None:
+    with engine.begin() as conn:
+        conn.execute(table.delete().where(table.c.id == photo_id))
+
+
+def load_user_keys(table: Table, user_id: str) -> dict[str, str]:
+    """{filename: storage_key} for one user — what the endpoints sign links from."""
+    query = select(table.c.filename, table.c.storage_key).where(table.c.user_id == user_id)
+    with engine.connect() as conn:
+        return {filename: key for filename, key in conn.execute(query)}
