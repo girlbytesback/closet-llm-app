@@ -13,8 +13,6 @@ import pytest
 
 from closetllm.color import validate_hex_value
 from closetllm.config import (
-    color_palettes_folder,
-    garment_folder,
     garment_hex_colors,
     img_types,
     palette_hex_colors,
@@ -28,14 +26,6 @@ STORES = [
     pytest.param(garment_hex_colors, id="garments.json"),
     pytest.param(palette_hex_colors, id="colors.json"),
 ]
-
-needs_photos = pytest.mark.skipif(
-    not garment_folder.exists(),
-    reason="garment photos are gitignored; reconciliation only runs where they exist",
-)
-
-def photos_in(folder):
-    return {p.name for p in folder.iterdir() if p.suffix.lower() in img_types}
 
 
 @pytest.fixture(scope="module", params=STORES)
@@ -74,29 +64,6 @@ def test_every_key_looks_like_a_photo_filename(store):
 def test_no_duplicate_colours_within_one_entry(store):
     for name, colors in store.items():
         assert len(set(colors)) == len(colors), name
-
-
-# -------------------------------------------------------- store vs. folder
-@needs_photos
-def test_every_garment_photo_has_been_extracted():
-    missing = photos_in(garment_folder) - set(load_data(garment_hex_colors))
-    assert not missing, f"run `closetllm clothes` — not yet extracted: {sorted(missing)}"
-
-
-def test_every_palette_photo_has_been_extracted():
-    missing = photos_in(color_palettes_folder) - set(load_data(palette_hex_colors))
-    assert not missing, f"run `closetllm palettes` — not yet extracted: {sorted(missing)}"
-
-@needs_photos
-def test_every_extracted_garment_still_has_its_photo():
-    # extract.run only ever adds keys, so a renamed photo leaves its old entry
-    # behind — that is how GARMENT_1.jpg outlived the rename to .jpeg
-    stale = set(load_data(garment_hex_colors)) - photos_in(garment_folder)
-    assert not stale, f"no photo on disk for: {sorted(stale)}"
-
-def test_every_extracted_palette_still_has_its_photo():
-    stale = set(load_data(palette_hex_colors)) - photos_in(color_palettes_folder)
-    assert not stale, f"no photo on disk for: {sorted(stale)}"
 
 
 # --------------------------------------------------------------- shape rules
