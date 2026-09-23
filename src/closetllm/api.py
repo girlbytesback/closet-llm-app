@@ -10,7 +10,7 @@ from fastapi import (
 
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
-from closetllm.color import default_cutoff
+from closetllm.color import default_cutoff, max_cutoff
 from closetllm.extract import load_data, palette_job, garment_job
 from closetllm.match import build_matches, compute_matches
 from closetllm.config import (
@@ -71,19 +71,28 @@ def get_garments(user_id: str = Depends(current_user)):
 
 @app.get("/color-palettes", response_model=PalettesResponse, dependencies=auth_required)
 def get_color_palettes(user_id: str = Depends(current_user)):
-    palettes = db.load_user_colors(db.garments, user_id)
+    palettes = db.load_user_colors(db.palettes, user_id)
     if not palettes:
         raise HTTPException(status_code=404, detail="no palettes saved yet")
     return {"count": len(palettes), "palettes": palettes}
 
 @app.get("/color-matches")
-def color_matches(cutoff: float = default_cutoff, user_id: str = Depends(current_user)) -> dict:
+def color_matches(
+    cutoff: float = Query(default_cutoff, ge=0, le=max_cutoff),
+    user_id: str = Depends(current_user),
+) -> dict:
     # 1. load this user's colors from the db
     garments = db.load_user_colors(db.garments, user_id)
     palettes = db.load_user_colors(db.palettes, user_id)
 
-    # 2. the color math (pure; doesn't know about db or storage)
-    doc = build_matches(compute_matches(garments, palettes, cutoff), cutoff)
+    # 2. the color math (pure; doesn't know about db or storage). An empty
+    #    store is a 404 like /garments, not a 500 — "extract something first"
+    #    is a state the UI renders, not a bug.
+    try:
+        results = compute_matches(garments, palettes, cutoff)
+    except FileNotFoundError as err:
+        raise HTTPException(status_code=404, detail=str(err))
+    doc = build_matches(garments, results, cutoff)
 
     # 3. swap in photo links from the bucket
     garment_keys = db.load_user_keys(db.garments, user_id)     # {filename: key}
@@ -99,12 +108,12 @@ def color_matches(cutoff: float = default_cutoff, user_id: str = Depends(current
 
 @app.post("/upload-garments", status_code=201, response_model=UploadResponse)
 def upload_garment(file: UploadFile = File(), user_id: str = Depends(current_user)):
-    return ingest(file, garment_job, db.garments, "garments", True, user_id)
+    return ingest(file, garment_job, db.garments, user_id, needs_web_copy=True)
 
 
 @app.post("/upload-palettes", status_code=201, response_model=UploadResponse)
 def upload_palette(file: UploadFile = File(), user_id: str = Depends(current_user)):
-    return ingest(file, palette_job, db.palettes, "palettes", False, user_id)
+    return ingest(file, palette_job, db.palettes, user_id, needs_web_copy=False)
 
 @app.exception_handler(json.JSONDecodeError)
 def corrupt_data(request: Request, exc: json.JSONDecodeError):

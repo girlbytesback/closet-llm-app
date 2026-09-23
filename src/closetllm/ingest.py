@@ -24,11 +24,24 @@ CONTENT_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png
 # 5. insert the row  (a duplicate stops here)
 # 6. upload to the bucket, undoing the row if that fails
 
+
+def storage_key_for(table: Table, user_id: str, photo_id: uuid.UUID, suffix: str) -> str:
+    """Where this photo's bytes live in the bucket.
+
+    The row's own id, not the filename: the bucket is one flat namespace, two
+    people are each allowed a shirt.jpeg, and the same person is allowed one in
+    each table. The table name leads so a prefix listing is per-kind, and the
+    user id comes next so a policy can be written against the path.
+    """
+    return f"{table.name}/{user_id}/{photo_id}{suffix}"
+
+
 def ingest(file: UploadFile, job: ExtractPhotoDetails, table: Table,
            user_id: str, needs_web_copy: bool) -> dict:
     # 1. check the type
     file_name = Path(file.filename).name
-    if Path(file_name).suffix.lower() not in img_types:
+    suffix = Path(file_name).suffix.lower()
+    if suffix not in img_types:
         raise HTTPException(status_code=415, detail="unsupported type")
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -56,17 +69,14 @@ def ingest(file: UploadFile, job: ExtractPhotoDetails, table: Table,
 
         # 5. insert the row (duplicates stop here)
         photo_id = uuid.uuid4()
-        storage_key = f"{user_id}/{file_name}"
-        try:
-            db.add_photo(table, user_id, file_name, hexes, storage_key, photo_id)
-        except db.DuplicatePhoto:
-            raise HTTPException(status_code=409, detail=f"{file_name} already exists")
+        storage_key = storage_key_for(table, user_id, photo_id, suffix)
+        db.add_photo(table, user_id, file_name, hexes, storage_key, photo_id)
 
         # 6. upload; undo the row if it fails
         try:
-            storage.upload(storage_key, to_upload)
+            storage.put_file(storage_key, to_upload)
         except Exception:
-            db.delete_photo(table, user_id, photo_id)
+            db.delete_photo(table, photo_id)
             raise
 
-    return {"name": file_name, "colors": hexes}    
+    return {"name": file_name, "colors": hexes}

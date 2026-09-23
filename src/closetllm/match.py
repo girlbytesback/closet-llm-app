@@ -1,8 +1,9 @@
 """Scoring the closet against the palettes, and the three things we do with it.
 
-compute_matches is the only part that thinks. filter/print/write are consumers
-that each take the scores and do one thing, so a web server can later import
-compute_matches without dragging the printing along with it.
+compute_matches is the only part that thinks, and it thinks about nothing but
+the two dicts it is handed: the caller decides whether those came out of
+Postgres (api.py) or off disk (run_matches, for the CLI). filter/print/write
+are consumers that each take the scores and do one thing.
 """
 
 from pathlib import Path
@@ -18,22 +19,20 @@ from closetllm.config import (
 )
 from closetllm.extract import load_data, save_data
 
-def compute_matches(garments: dict, palettes: dict, cutoff: float) -> dict:
-    color_palettes = load_data(palette_hex_colors)
-    garments = load_data(garment_hex_colors)
-
-    if not color_palettes:
+def compute_matches(garments: dict, palettes: dict, cutoff: float = default_cutoff) -> dict:
+    # palettes first: with nothing saved at all, "extract some inspiration" is
+    # the more useful of the two errors, and the API turns it into the 404
+    if not palettes:
         raise FileNotFoundError("no color palettes saved yet")
     if not garments:
         raise FileNotFoundError("no clothes saved yet")
     return {
         name: matches_for_color_palette(palette_colors, garments, cutoff)
-        for name, palette_colors in sorted(color_palettes.items())
+        for name, palette_colors in sorted(palettes.items())
     }
 
-def build_matches(results: dict, cutoff: float) -> dict:
+def build_matches(garments: dict, results: dict, cutoff: float) -> dict:
     #shape + return the scores into doc the web UI reads
-    garments = load_data(garment_hex_colors)
     return {
         "meta": {
             "cutoff": cutoff,
@@ -65,8 +64,8 @@ def build_matches(results: dict, cutoff: float) -> dict:
         },
     }
 
-def write_matches(results: dict, path: Path, cutoff: float) -> None:
-    save_data(build_matches(results, cutoff), path)
+def write_matches(garments: dict, results: dict, path: Path, cutoff: float) -> None:
+    save_data(build_matches(garments, results, cutoff), path)
 
 def print_matches(results: dict, cutoff: float, limit: Optional[int] = None) -> None:
     # compute_matches already returns {palette: {palette_color: [(garment, score)]}},
@@ -93,14 +92,19 @@ def run_matches(
     limit: Optional[int] = None,
     out: Optional[Path] = None,
 ) -> dict:
+    # the CLI half: the closet it scores is the JSON `closetllm clothes` wrote,
+    # not anybody's rows. The API reads the same functions off the database.
+    garments = load_data(garment_hex_colors)
+    palettes = load_data(palette_hex_colors)
+
     # the printout and the exported file are the same set of matches, both cut
     # at the same cutoff — what you read in the terminal is what the UI gets
-    results = compute_matches(cutoff)
+    results = compute_matches(garments, palettes, cutoff)
 
     print_matches(results, cutoff, limit)
 
     if out is not None:
-        write_matches(results, out, cutoff)
+        write_matches(garments, results, out, cutoff)
         print(f"\nwrote {out}")
 
     return results

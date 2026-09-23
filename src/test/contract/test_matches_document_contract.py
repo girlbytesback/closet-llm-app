@@ -17,11 +17,24 @@ import json
 from closetllm.color import default_cutoff
 from closetllm.match import build_matches, compute_matches
 
-from conftest import SAGE
+from conftest import SAGE, SAMPLE_GARMENTS, SAMPLE_PALETTES
 
 
 def document(seeded, cutoff=default_cutoff):
-    return build_matches(compute_matches(cutoff), cutoff)
+    # the samples rather than anything seeded reads back: build_matches is
+    # handed its two dicts now, and `seeded` is only here so the one test that
+    # goes through the API below has rows to serve
+    results = compute_matches(SAMPLE_GARMENTS, SAMPLE_PALETTES, cutoff)
+    return build_matches(SAMPLE_GARMENTS, results, cutoff)
+
+
+def without_src(doc: dict) -> dict:
+    """The API document minus the two keys api.py adds on its way out."""
+    stripped = json.loads(json.dumps(doc))
+    for section in ("garments", "palettes"):
+        for entry in stripped[section].values():
+            entry.pop("src", None)
+    return stripped
 
 
 def test_the_document_survives_a_json_round_trip(seeded):
@@ -85,5 +98,17 @@ def test_a_cutoff_that_matches_nothing_still_produces_a_renderable_document(seed
 
 
 def test_the_api_and_the_written_file_are_the_same_document(seeded, client):
-    # the UI can read either; they must not drift apart
-    assert client.get("/color-matches").json() == json.loads(json.dumps(document(seeded)))
+    # the UI can read either; they must not drift apart. "src" is the one
+    # allowed difference — build_matches cannot know where a photo lives, so
+    # api.py is the only side that fills it in.
+    served = client.get("/color-matches").json()
+
+    assert without_src(served) == json.loads(json.dumps(document(seeded)))
+
+
+def test_the_api_adds_a_src_to_every_entry_and_nothing_else(seeded, client):
+    served = client.get("/color-matches").json()
+
+    for section in ("garments", "palettes"):
+        for entry in served[section].values():
+            assert "src" in entry

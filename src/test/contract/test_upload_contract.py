@@ -2,14 +2,17 @@
 
 What ingest() does with a photo is covered in unit/test_ingest_unit.py. These
 tests care about the envelope — status codes, the JSON body, and that each
-route is wired to the job, folder and store it claims to be.
+route is wired to the job, table and bucket prefix it claims to be.
 
-upload_paths is not optional here: without it these tests would write real
-photos into garments/ and real rows into the database the closet lives in.
-It carries the fake store the uploads write to, as upload_paths.db.
+upload_paths is not optional here: without it these tests would put real
+photos in the bucket and real rows in the database the closet lives in. It
+carries both fakes, as upload_paths.db and upload_paths.storage.
 """
 
+import io
+
 import pytest
+from PIL import Image
 
 from helpers import jpeg_bytes
 
@@ -44,44 +47,59 @@ def test_a_palette_upload_is_201_with_every_colour(client, upload_paths, fake_mo
 
 # --------------------------------------------------------------- the wiring
 
-def test_a_garment_lands_in_the_garment_folder_and_table(client, upload_paths, fake_model):
+def uploaded(upload_paths):
+    """The one object the request put in the bucket, as (key, bytes)."""
+    files = upload_paths.storage.files
+    assert len(files) == 1, files
+    return next(iter(files.items()))
+
+
+def test_a_garment_lands_under_the_garment_prefix_and_table(client, upload_paths, fake_model):
     fake_model({"item": "shirt", "color": "#B5C29A"})
 
     client.post("/upload-garments", files=photo())
 
-    assert (upload_paths.garments / "shirt.jpeg").exists()
+    key, _ = uploaded(upload_paths)
+    assert key.startswith("garments/")
     assert upload_paths.db.garments() == {"shirt.jpeg": ["#B5C29A"]}
     # the wrong table would mean the garment shows up as an inspiration palette
     assert upload_paths.db.palettes() == {}
 
 
-def test_a_garment_upload_writes_the_web_copy_the_ui_serves(client, upload_paths, fake_model):
-    # /img/garments is mounted on the web folder, not on garments/ — an upload
-    # that skipped this step would 404 in the browser
+def test_a_garment_upload_stores_the_web_copy_the_ui_serves(client, upload_paths, fake_model):
+    # the UI draws garments at ~70px, so the route asks ingest for the
+    # downscaled copy; uploading the phone original would be megabytes a tile
+    from closetllm.config import web_max_edge
+
     fake_model({"item": "shirt", "color": "#B5C29A"})
 
-    client.post("/upload-garments", files=photo())
+    client.post("/upload-garments", files=photo(content=jpeg_bytes(size=(2000, 1500))))
 
-    assert (upload_paths.web_garments / "shirt.jpeg").exists()
+    _, data = uploaded(upload_paths)
+    assert max(Image.open(io.BytesIO(data)).size) == web_max_edge
 
 
-def test_a_palette_lands_in_the_palette_folder_and_table(client, upload_paths, fake_model):
+def test_a_palette_lands_under_the_palette_prefix_and_table(client, upload_paths, fake_model):
     fake_model({"colors": ["#B5C29A"]})
 
     client.post("/upload-palettes", files=photo("inspo.jpeg"))
 
-    assert (upload_paths.palettes / "inspo.jpeg").exists()
+    key, _ = uploaded(upload_paths)
+    assert key.startswith("palettes/")
     assert upload_paths.db.palettes() == {"inspo.jpeg": ["#B5C29A"]}
     assert upload_paths.db.garments() == {}
 
 
-def test_a_palette_gets_no_web_copy(client, upload_paths, fake_model):
-    # palettes are passed web_folder=None; only garments are served to the UI
+def test_a_palette_is_stored_at_full_size(client, upload_paths, fake_model):
+    # the route passes needs_web_copy=False: a palette is the thing you look
+    # at, not a thumbnail in a grid
     fake_model({"colors": ["#B5C29A"]})
+    original = jpeg_bytes(size=(2000, 1500))
 
-    client.post("/upload-palettes", files=photo("inspo.jpeg"))
+    client.post("/upload-palettes", files=photo("inspo.jpeg", original))
 
-    assert not upload_paths.web_garments.exists()
+    _, data = uploaded(upload_paths)
+    assert Image.open(io.BytesIO(data)).size == (2000, 1500)
 
 
 def test_the_row_is_filed_under_the_signed_in_user(client, upload_paths, fake_model):
@@ -125,7 +143,10 @@ def test_a_non_photo_is_415_with_a_detail(route, client, upload_paths, fake_mode
 
 @pytest.mark.parametrize("route", ["/upload-garments", "/upload-palettes"])
 def test_uploading_the_same_photo_twice_is_409(route, client, upload_paths, fake_model):
-    fake_model({"item": "shirt", "color": "#B5C29A", "colors": ["#B5C29A"]})
+    # two replies, not one: the unique constraint is what refuses the second
+    # upload, and it only speaks once the colors are already back
+    reply = {"item": "shirt", "color": "#B5C29A", "colors": ["#B5C29A"]}
+    fake_model(reply, reply)
 
     assert client.post(route, files=photo()).status_code == 201
     response = client.post(route, files=photo())
@@ -161,18 +182,11 @@ def test_a_rejected_upload_leaves_nothing_behind(route, client, upload_paths, fa
 
 # ---------------------------------------------------------- the round trip
 #
-# Both of these are xfail until the read routes move over: the upload writes a
-# row and /garments still reads data/garments.json, so nothing an upload does
-# is visible to a GET. strict=True so they fail loudly once the two halves are
-# talking to the same store again, rather than sitting here passing silently.
-
-ROUND_TRIP = pytest.mark.xfail(
-    strict=True,
-    reason="uploads write rows, the read routes still read the JSON store",
-)
+# These two were xfail while the read routes still served data/garments.json
+# and an upload wrote a row, so nothing an upload did was visible to a GET.
+# Both halves read the same table now, which is what closes the loop.
 
 
-@ROUND_TRIP
 def test_an_uploaded_garment_shows_up_in_get_garments(client, upload_paths, fake_model):
     # /garments is a 404 on an empty store, so this closes the loop: the upload
     # is what makes the store non-empty
@@ -186,7 +200,6 @@ def test_an_uploaded_garment_shows_up_in_get_garments(client, upload_paths, fake
     assert response.json() == {"count": 1, "garments": {"shirt.jpeg": ["#B5C29A"]}}
 
 
-@ROUND_TRIP
 def test_an_uploaded_palette_shows_up_in_get_color_palettes(client, upload_paths, fake_model):
     fake_model({"colors": ["#B5C29A"]})
 

@@ -46,6 +46,19 @@ def _photos_table(name: str) -> Table:
 garments = _photos_table("garments")
 palettes = _photos_table("palettes")
 
+
+class DuplicatePhoto(HTTPException):
+    """This user already has a photo under this filename.
+
+    An HTTPException subclass rather than a plain one, so the unique constraint
+    and any caller that forgets to catch it both produce the same 409 body
+    rather than a 500.
+    """
+
+    def __init__(self, filename: str):
+        super().__init__(status_code=409, detail=f"{filename} already exists")
+
+
 def load_user_colors(table: Table, user_id: str) -> dict[str, list[str]]:
     """One user's rows, in the exact {filename: [hexes]} shape the JSON had."""
     query = select(table.c.filename, table.c.colors).where(table.c.user_id == user_id)

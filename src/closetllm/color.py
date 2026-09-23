@@ -12,6 +12,11 @@ _WHITE = (0.95047, 1.00000, 1.08883)
 # colors, subject to change!!!
 default_cutoff = 15.0
 
+# The ceiling the API accepts. CIEDE2000 between two sRGB colors tops out
+# around 100 (black against white), so anything past it is the same query as
+# "every garment" — a typo rather than a request, and worth a 422.
+max_cutoff = 100.0
+
 def validate_hex_value(value: str) -> str:
     if not isinstance(value, str):
         raise ValueError(f"not a hex color: {value!r}")

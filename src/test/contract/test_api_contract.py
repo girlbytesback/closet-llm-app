@@ -7,10 +7,12 @@ tested there — these tests only care about the envelope.
 
 import pytest
 
-from closetllm.color import default_cutoff
+from closetllm import db
+from closetllm.color import default_cutoff, max_cutoff
 from closetllm.extract import save_data
 
 from conftest import NEAR_BLACK, SAGE, SAMPLE_GARMENTS, SAMPLE_PALETTES
+from helpers import TEST_USER
 
 
 # ----------------------------------------------------------------- /health
@@ -86,10 +88,18 @@ def test_garments_is_404_before_anything_is_extracted(client):
     assert response.json() == {"detail": "no clothes saved yet"}
 
 
-def test_an_empty_store_is_404_not_an_empty_list(client, data_paths):
+def test_an_empty_store_is_404_not_an_empty_list(client, fake_db):
     # the UI distinguishes "run the extractor first" from "you own no clothes"
-    save_data({}, data_paths.garments)
+    fake_db.seed(db.garments, TEST_USER, {})
     assert client.get("/garments").status_code == 404
+
+
+def test_garments_only_returns_the_asking_users_rows(client, fake_db):
+    # rows are owned; the id comes off the token, never off the query string
+    fake_db.seed(db.garments, TEST_USER, {"mine.jpeg": [SAGE]})
+    fake_db.seed(db.garments, "someone-else", {"theirs.jpeg": [NEAR_BLACK]})
+
+    assert client.get("/garments").json()["garments"] == {"mine.jpeg": [SAGE]}
 
 
 # --------------------------------------------------------- /color-palettes
@@ -108,12 +118,21 @@ def test_palettes_is_404_before_anything_is_extracted(client):
     assert response.json() == {"detail": "no palettes saved yet"}
 
 
-def test_the_two_stores_are_independent(client, data_paths):
+def test_the_two_stores_are_independent(client, fake_db):
     # garments saved, palettes not: one endpoint works, the other 404s
-    save_data(SAMPLE_GARMENTS, data_paths.garments)
+    fake_db.seed(db.garments, TEST_USER, SAMPLE_GARMENTS)
 
     assert client.get("/garments").status_code == 200
     assert client.get("/color-palettes").status_code == 404
+
+
+def test_the_palette_route_reads_the_palette_table(client, fake_db):
+    # it read db.garments for a while, which served the closet back as
+    # inspiration and made /color-palettes agree with /garments exactly
+    fake_db.seed(db.garments, TEST_USER, SAMPLE_GARMENTS)
+    fake_db.seed(db.palettes, TEST_USER, SAMPLE_PALETTES)
+
+    assert client.get("/color-palettes").json()["palettes"] == SAMPLE_PALETTES
 
 
 # ---------------------------------------------------------- /color-matches
@@ -162,6 +181,12 @@ def test_a_cutoff_past_the_ceiling_is_a_422(client, seeded):
     assert response.status_code == 422
 
 
+def test_the_ceiling_itself_is_allowed(client, seeded):
+    # the bound is inclusive: ~100 is the largest distance two sRGB colours can
+    # be apart, so asking for it is "match everything", not a typo
+    assert client.get("/color-matches", params={"cutoff": max_cutoff}).status_code == 200
+
+
 def test_matches_is_404_when_nothing_is_extracted(client):
     response = client.get("/color-matches")
 
@@ -169,8 +194,8 @@ def test_matches_is_404_when_nothing_is_extracted(client):
     assert "no color palettes saved yet" in response.json()["detail"]
 
 
-def test_matches_is_404_when_only_palettes_exist(client, data_paths):
-    save_data(SAMPLE_PALETTES, data_paths.palettes)
+def test_matches_is_404_when_only_palettes_exist(client, fake_db):
+    fake_db.seed(db.palettes, TEST_USER, SAMPLE_PALETTES)
     response = client.get("/color-matches")
 
     assert response.status_code == 404
@@ -230,6 +255,13 @@ def test_the_response_is_json_serialisable_as_sent(client, seeded):
 
 
 # ----------------------------------------------------- corrupt data storage
+#
+# /stats is the last route reading the two JSON files; /garments,
+# /color-palettes and /color-matches all serve rows. So /stats is the only
+# place the JSONDecodeError handler can still fire, and these tests point at
+# it rather than at the routes they used to cover. The other half of the
+# contract — that a bad file on disk no longer reaches the row-backed routes
+# at all — is the last two tests here.
 
 TRUNCATED = '{"sage_shirt.jpeg": ["#B5C29A"'
 CORRUPT_DETAIL = "data storage is corrupt; re-run extraction"
@@ -244,7 +276,7 @@ def test_a_truncated_garment_store_is_a_500_not_a_traceback(client, data_paths):
     # load_data raises JSONDecodeError rather than reading as {}; the handler
     # turns that into an envelope the UI can render
     write_corrupt(data_paths.garments)
-    response = client.get("/garments")
+    response = client.get("/stats")
 
     assert response.status_code == 500
     assert response.json() == {"detail": CORRUPT_DETAIL}
@@ -252,37 +284,17 @@ def test_a_truncated_garment_store_is_a_500_not_a_traceback(client, data_paths):
 
 def test_a_truncated_palette_store_is_a_500(client, data_paths):
     write_corrupt(data_paths.palettes)
-    response = client.get("/color-palettes")
+    response = client.get("/stats")
 
     assert response.status_code == 500
     assert response.json() == {"detail": CORRUPT_DETAIL}
 
 
-def test_matches_reports_corruption_in_either_store(client, seeded):
-    for path in (seeded.garments, seeded.palettes):
-        good = path.read_text()
-        write_corrupt(path)
-
-        response = client.get("/color-matches")
-        assert response.status_code == 500, path.name
-        assert response.json() == {"detail": CORRUPT_DETAIL}
-
-        path.write_text(good)
-
-
-def test_corruption_is_500_not_the_404_empty_store_case(client, data_paths):
+def test_corruption_is_500_not_the_empty_store_answer(client, data_paths):
     # "re-run extraction" and "you haven't extracted yet" are different fixes,
-    # so the UI must not see them as the same status
+    # and /stats answers the second one with a 200 and zeroes
     write_corrupt(data_paths.garments)
-    assert client.get("/garments").status_code != 404
-
-
-def test_one_corrupt_store_does_not_take_down_the_other(client, data_paths):
-    save_data(SAMPLE_PALETTES, data_paths.palettes)
-    write_corrupt(data_paths.garments)
-
-    assert client.get("/garments").status_code == 500
-    assert client.get("/color-palettes").status_code == 200
+    assert client.get("/stats").status_code != 200
 
 
 def test_health_survives_a_corrupt_store(client, data_paths):
@@ -293,22 +305,42 @@ def test_health_survives_a_corrupt_store(client, data_paths):
 
 def test_the_corrupt_response_is_json(client, data_paths):
     write_corrupt(data_paths.garments)
-    response = client.get("/garments")
+    response = client.get("/stats")
     assert response.headers["content-type"].startswith("application/json")
 
 
 def test_the_corrupt_response_does_not_leak_the_path(client, data_paths):
     # the detail is user-facing; the filesystem layout stays in the log
     write_corrupt(data_paths.garments)
-    assert str(data_paths.garments) not in client.get("/garments").text
+    assert str(data_paths.garments) not in client.get("/stats").text
 
 
 def test_corruption_is_logged_with_the_request_path(client, data_paths, caplog):
     write_corrupt(data_paths.garments)
     with caplog.at_level("ERROR", logger="closetllm"):
-        client.get("/garments")
+        client.get("/stats")
 
-    assert any("/garments" in r.getMessage() for r in caplog.records)
+    assert any("/stats" in r.getMessage() for r in caplog.records)
+
+
+def test_a_corrupt_file_no_longer_reaches_the_row_backed_routes(client, seeded):
+    # the JSON store is not in the read path any more, so a file nobody can
+    # parse is no longer able to take the closet down
+    for path in (seeded.garments, seeded.palettes):
+        write_corrupt(path)
+
+    assert client.get("/garments").status_code == 200
+    assert client.get("/color-palettes").status_code == 200
+    assert client.get("/color-matches").status_code == 200
+
+
+def test_one_corrupt_store_does_not_take_down_the_other(client, seeded):
+    write_corrupt(seeded.garments)
+
+    # /stats reads both files, so it goes down with either of them...
+    assert client.get("/stats").status_code == 500
+    # ...but the routes the UI actually renders are served from rows
+    assert client.get("/garments").status_code == 200
 
 
 # ------------------------------------------------------------ route surface

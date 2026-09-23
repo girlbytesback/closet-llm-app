@@ -28,6 +28,7 @@ from helpers import (  # noqa: F401
     FakeMessages,
     FakeResponse,
     FakeBlock,
+    RefusingBucket,
     RefusingEngine,
     TEST_USER,
     jpeg_bytes,
@@ -75,10 +76,29 @@ def data_paths(tmp_path, monkeypatch):
 
 
 @pytest.fixture
-def seeded(data_paths):
-    """data_paths, with the sample closet and palettes already on disk."""
+def seeded(data_paths, fake_db, fake_storage):
+    """The sample closet and palettes, in both stores.
+
+    Both, because the migration off the JSON files is only half done: the read
+    routes and the matching the UI drives run off rows now, while /stats and
+    the whole CLI path still read the two files. A fixture per store would mean
+    every test picking the right one; seeding both means a test picks the
+    assertion it cares about instead.
+
+    The bucket is filled in too, from the keys the seeded rows carry, so
+    /color-matches hands back real (fake) signed links rather than nulls.
+    """
     extract.save_data(SAMPLE_GARMENTS, data_paths.garments)
     extract.save_data(SAMPLE_PALETTES, data_paths.palettes)
+
+    fake_db.seed(db.garments, TEST_USER, SAMPLE_GARMENTS)
+    fake_db.seed(db.palettes, TEST_USER, SAMPLE_PALETTES)
+    for table in (db.garments, db.palettes):
+        for key in fake_db.load_user_keys(table, TEST_USER).values():
+            fake_storage.put(key, jpeg_bytes(), "image/jpeg")
+
+    data_paths.db = fake_db
+    data_paths.storage = fake_storage
     return data_paths
 
 
@@ -89,7 +109,7 @@ def no_real_database(request, monkeypatch):
     db.engine is built at import from DATABASE_URL — on a laptop that is the
     database holding the real closet, and .env means it is always set. Every
     test therefore runs with the engine replaced by one that refuses; fake_db
-    below patches the two functions that would have used it. The opt-in
+    below patches the four functions that would have used it. The opt-in
     postgres tests are the only ones that keep a working engine.
     """
     if request.node.get_closest_marker("postgres"):
@@ -97,9 +117,21 @@ def no_real_database(request, monkeypatch):
     monkeypatch.setattr(db, "engine", RefusingEngine())
 
 
+@pytest.fixture(autouse=True)
+def no_real_storage(monkeypatch):
+    """The same guard as no_real_database, for the photo bucket.
+
+    storage._bucket is built at import from SUPABASE_URL, so an ingest test
+    that forgot fake_storage would upload into the bucket the real closet's
+    photos live in. Nothing here is opt-out: even the postgres tests have no
+    business writing to it.
+    """
+    monkeypatch.setattr(storage, "_bucket", RefusingBucket())
+
+
 @pytest.fixture
 def fake_db(monkeypatch):
-    """Swap closetllm.db's two functions for the in-memory FakeDB.
+    """Swap closetllm.db's four functions for the in-memory FakeDB.
 
     Same trick as fake_model, and for the same reason: the tests that use it
     care about what ingest does with a row, not about Postgres. ingest calls
@@ -109,6 +141,8 @@ def fake_db(monkeypatch):
     fake = FakeDB()
     monkeypatch.setattr(db, "add_photo", fake.add_photo)
     monkeypatch.setattr(db, "load_user_colors", fake.load_user_colors)
+    monkeypatch.setattr(db, "load_user_keys", fake.load_user_keys)
+    monkeypatch.setattr(db, "delete_photo", fake.delete_photo)
     return fake
 
 
@@ -129,8 +163,13 @@ def fake_storage(monkeypatch):
 
 
 @pytest.fixture
-def client(data_paths):
+def client(data_paths, fake_db, fake_storage):
     """A signed-in client, so no test needs a real Supabase token.
+
+    fake_db and fake_storage are not optional: every route but /health and
+    /stats reads rows now, and /color-matches signs a bucket link per photo.
+    Without them a plain GET would reach the database and the bucket the real
+    closet lives in.
 
     dependency_overrides swaps the Depends target for the lifetime of the
     fixture; the clear() after the yield puts the real dependency back, which is

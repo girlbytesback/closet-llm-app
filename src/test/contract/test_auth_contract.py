@@ -30,7 +30,9 @@ def test_garbage_token_is_401(data_paths):
     assert response.status_code == 401
 
 
-def test_a_valid_token_gets_past_auth(monkeypatch, data_paths):
+def test_a_valid_token_gets_past_auth(monkeypatch, data_paths, fake_db):
+    # fake_db because /garments reads rows: without it the request gets past
+    # auth and then dies on the real engine, which looks the same from here.
     # 32+ bytes only to keep PyJWT from warning about a short HMAC key; the value
     # itself is throwaway and never leaves this test.
     secret = "test-secret-padded-to-32-bytes-min"
