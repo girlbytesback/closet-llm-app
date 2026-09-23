@@ -16,6 +16,9 @@ from closetllm.images import web_copy
 
 CONTENT_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
 
+# uploads per user, per table, in any rolling 24 hours
+DAILY_LIMIT = 30
+
 # INGEST() WILL:
 # 1. check the file type
 # 2. save the upload into a temp folder, which is emptied on the way out —

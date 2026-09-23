@@ -143,6 +143,7 @@ def fake_db(monkeypatch):
     monkeypatch.setattr(db, "load_user_colors", fake.load_user_colors)
     monkeypatch.setattr(db, "load_user_keys", fake.load_user_keys)
     monkeypatch.setattr(db, "delete_photo", fake.delete_photo)
+    monkeypatch.setattr(db, "uploads_since", fake.uploads_since)
     return fake
 
 

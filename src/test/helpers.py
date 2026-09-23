@@ -73,6 +73,9 @@ class FakeDB:
         self.rows: dict[tuple[str, str], dict[str, dict]] = {}
         self.calls: list[dict] = []          # every add_photo, for assertions
         self.deleted: list[tuple[str, object]] = []   # every delete_photo
+        # what uploads_since reports, whatever the table, user or window: 0
+        # keeps every test under the daily limit; set it to hit the 429
+        self.recent_uploads = 0
 
     # ---------------------------------------------- the db module's interface
 
@@ -115,6 +118,11 @@ class FakeDB:
             for filename, row in list(owned.items()):
                 if row["id"] == photo_id:
                     del owned[filename]
+
+    def uploads_since(self, table, user_id, since) -> int:
+        # rows carry no created_at here, so there is no window to count over;
+        # the test says how many there were instead
+        return self.recent_uploads
 
     # ------------------------------------------------- conveniences for tests
 

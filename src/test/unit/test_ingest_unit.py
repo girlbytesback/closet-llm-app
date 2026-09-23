@@ -157,6 +157,23 @@ def test_the_same_filename_under_another_user_is_allowed(upload, job, stores, fa
     assert stores.db.garments("someone-else") == {"shirt.jpeg": ["#123456"]}
 
 
+# --------------------------------------------------------------- daily limit
+
+def test_an_upload_over_the_daily_limit_is_429(upload, job, stores, fake_model):
+    stores.db.recent_uploads = 30
+    messages = fake_model()  # any model call at all fails the test
+
+    with pytest.raises(HTTPException) as err:
+        ingest(upload("shirt.jpeg"), job, db.garments, USER, False)
+
+    assert err.value.status_code == 429
+    # the limit is there to cap model spend, so it has to stop the upload
+    # before the call, and before anything is written
+    assert messages.calls == []
+    assert stores.storage.files == {}
+    assert stores.db.garments() == {}
+
+
 # ------------------------------------------------------------ the object key
 
 def test_the_photo_is_uploaded_byte_for_byte(upload, palette, stores, fake_model):
