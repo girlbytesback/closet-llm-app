@@ -1,20 +1,26 @@
 name: tests
 on: [push, pull_request]
 
+# Dummy values for every os.environ[...] read in config.py.
+# They only exist so config.py can be imported: tests mock the
+# database and storage, so nothing ever connects to these.
+# Applies to every job below.
+env:
+  DATABASE_URL: postgresql+psycopg://fake:fake@localhost:5432/not_a_real_db
+  SUPABASE_URL: https://fake.supabase.co
+  SUPABASE_SECRET_KEY: sb_secret_fake_key_for_ci
+  SUPABASE_JWT_SECRET: fake-jwt-secret-for-ci-at-least-32-chars
+
 jobs:
   python:
     runs-on: ubuntu-latest
-    # ADDED: dummy value so config.py can be imported.
-    # all tests are mocked (RefusingEngine), so nothing ever connects to it.
-    env:
-      DATABASE_URL: postgresql+psycopg://fake:fake@localhost:5432/not_a_real_db
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --frozen
       - run: uv run pytest -q -rs
 
-  # ADDED: real-Postgres integration tests (@pytest.mark.postgres),
+  # Real-Postgres integration tests (@pytest.mark.postgres),
   # against a throwaway container that only lives for this job.
   python-postgres:
     runs-on: ubuntu-latest
@@ -33,8 +39,7 @@ jobs:
           --health-interval 5s
           --health-retries 5
     env:
-      # still required: config.py reads it at import time
-      DATABASE_URL: postgresql+psycopg://fake:fake@localhost:5432/not_a_real_db
+      # only the variable unique to this job lives here.
       # different db name from DATABASE_URL, so the same-db guard passes
       TEST_DATABASE_URL: postgresql+psycopg://test:test@localhost:5432/closetllm_test
     steps:
