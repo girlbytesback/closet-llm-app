@@ -4,11 +4,44 @@ on: [push, pull_request]
 jobs:
   python:
     runs-on: ubuntu-latest
+    # ADDED: dummy value so config.py can be imported.
+    # all tests are mocked (RefusingEngine), so nothing ever connects to it.
+    env:
+      DATABASE_URL: postgresql+psycopg://fake:fake@localhost:5432/not_a_real_db
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --frozen
       - run: uv run pytest -q -rs
+
+  # ADDED: real-Postgres integration tests (@pytest.mark.postgres),
+  # against a throwaway container that only lives for this job.
+  python-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: closetllm_test
+        ports:
+          - 5432:5432
+        # wait until Postgres accepts connections before running steps
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-retries 5
+    env:
+      # still required: config.py reads it at import time
+      DATABASE_URL: postgresql+psycopg://fake:fake@localhost:5432/not_a_real_db
+      # different db name from DATABASE_URL, so the same-db guard passes
+      TEST_DATABASE_URL: postgresql+psycopg://test:test@localhost:5432/closetllm_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --frozen
+      - run: uv run pytest -m postgres -q -rs
 
   ui:
     runs-on: ubuntu-latest
