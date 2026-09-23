@@ -2,6 +2,7 @@ from __future__ import annotations
 import shutil
 import tempfile
 import uuid
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
@@ -43,6 +44,10 @@ def ingest(file: UploadFile, job: ExtractPhotoDetails, table: Table,
     suffix = Path(file_name).suffix.lower()
     if suffix not in img_types:
         raise HTTPException(status_code=415, detail="unsupported type")
+
+    since = datetime.now(timezone.utc) - timedelta(days=1)
+    if db.uploads_since(table, user_id, since) >= DAILY_LIMIT:
+        raise HTTPException(status_code=429, detail="daily upload limit reached, try again tomorrow")
 
     with tempfile.TemporaryDirectory() as tmp:
         # 2. save the upload to the temp folder
