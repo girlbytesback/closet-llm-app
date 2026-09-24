@@ -4,17 +4,38 @@ Every route except /health is behind Depends(current_user). The rest of the
 suite runs with that dependency overridden, so these tests are the only ones
 that exercise the real one — each clears the override first.
 
-No test here talks to Supabase: the valid-token case mints its own JWT with a
-throwaway secret, which is enough to drive the real jwt.decode.
+No test here talks to Supabase: the valid-token case mints its own ES256 JWT
+with a throwaway key pair and swaps the JWKS client for one that hands back the
+matching public key, which is enough to drive the real jwt.decode.
 """
 
+from types import SimpleNamespace
+
 import jwt
+import pytest
+from cryptography.hazmat.primitives.asymmetric import ec
 
 from closetllm import api
 
 from fastapi.testclient import TestClient
 
 from helpers import jpeg_bytes
+
+
+@pytest.fixture
+def mint_token(monkeypatch):
+    # stands in for Supabase: a fresh P-256 key signs the token, and the JWKS
+    # lookup returns its public half instead of fetching the real key set
+    private_key = ec.generate_private_key(ec.SECP256R1())
+    fake_jwks = SimpleNamespace(
+        get_signing_key_from_jwt=lambda token: SimpleNamespace(key=private_key.public_key())
+    )
+    monkeypatch.setattr("closetllm.auth.jwks", fake_jwks)
+
+    def mint(sub):
+        return jwt.encode({"sub": sub, "aud": "authenticated"}, private_key, algorithm="ES256")
+
+    return mint
 
 
 def test_no_token_is_401(data_paths):
@@ -30,14 +51,10 @@ def test_garbage_token_is_401(data_paths):
     assert response.status_code == 401
 
 
-def test_a_valid_token_gets_past_auth(monkeypatch, data_paths, fake_db):
+def test_a_valid_token_gets_past_auth(mint_token, data_paths, fake_db):
     # fake_db because /garments reads rows: without it the request gets past
     # auth and then dies on the real engine, which looks the same from here.
-    # 32+ bytes only to keep PyJWT from warning about a short HMAC key; the value
-    # itself is throwaway and never leaves this test.
-    secret = "test-secret-padded-to-32-bytes-min"
-    monkeypatch.setattr("closetllm.auth.jwt_secret", secret)
-    token = jwt.encode({"sub": "user-123", "aud": "authenticated"}, secret, algorithm="HS256")
+    token = mint_token("user-123")
     api.app.dependency_overrides.clear()
     client = TestClient(api.app)
     response = client.get("/garments", headers={"Authorization": f"Bearer {token}"})
@@ -56,11 +73,9 @@ def test_an_upload_with_no_token_is_401(data_paths):
         assert response.status_code == 401, route
 
 
-def test_an_upload_with_a_valid_token_runs_as_that_user(monkeypatch, data_paths, upload_paths, fake_model):
+def test_an_upload_with_a_valid_token_runs_as_that_user(mint_token, data_paths, upload_paths, fake_model):
     # the id in the token is the owner of the row, not a constant
-    secret = "test-secret-padded-to-32-bytes-min"
-    monkeypatch.setattr("closetllm.auth.jwt_secret", secret)
-    token = jwt.encode({"sub": "user-123", "aud": "authenticated"}, secret, algorithm="HS256")
+    token = mint_token("user-123")
     fake_model({"item": "shirt", "color": "#B5C29A"})
     api.app.dependency_overrides.clear()
     client = TestClient(api.app)
