@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase, useSession } from "./supabase";
 import { authedFetch } from "./api";
 import SignIn from "./SignIn";
+import UploadPanel from "./UploadPanel";
 
 import heartButton from "./assets/icon-heart-button.png";
 import flowerButton from "./assets/icon-flower-button.png";
@@ -62,7 +63,10 @@ const MENU_BAR = 26;                 // the top bar owns this strip; windows sta
 const GUTTER = 16;                   // breathing room between a window and the screen edge
 const MAIN_W = 600, MAIN_H = 800;    // the main window at full size
 const MAIN_MIN = 280;                // it stops shrinking here; below this the screen wins
-const POPUP_W = 312, POPUP_H = 116;  // a pop-up as measured, before PROFILE_SCALE
+// A pop-up as measured, before PROFILE_SCALE. 190 is the upload pop-ups' height
+// with no results listed yet (title bar + heading + drop zone + button). Only
+// used to park and clamp the windows, so it's an estimate, not a hard size.
+const POPUP_W = 312, POPUP_H = 190;
 const PROFILE_SCALE = 1.3;           // how much bigger the pop-ups draw than they measure
 // Under this window width, a 150px sidebar leaves the stage too cramped to show
 // a garment grid — so the palette list flips from a left column to a top strip.
@@ -188,6 +192,13 @@ function MatchRow({ group, size }) {
   );
 }
 
+// The empty-closet screen's two buttons. Same look, different window.
+const emptyBtn = {
+  fontFamily: MONO, fontSize: 9, letterSpacing: ".08em", color: "#7a3557", cursor: "pointer",
+  padding: "6px 12px", borderRadius: 5, border: "1px solid #d3699f",
+  background: "linear-gradient(#ffe6f4,#ffd0e9)",
+};
+
 export default function ClosetLLM() {
   // ── Who's signed in ──
   // undefined while the saved session is being read, null when signed out,
@@ -197,6 +208,10 @@ export default function ClosetLLM() {
   // ── Data: fetched from the API once someone is signed in ──
   const [data, setData] = useState(null);   // the matches document, once it arrives
   const [error, setError] = useState(null); // a message if the fetch failed
+  // Bumped after a successful upload. It's in the effect's deps below, so a new
+  // number means "fetch /color-matches again" and the new photos show up.
+  const [reloadKey, setReloadKey] = useState(0);
+  const reload = () => setReloadKey((k) => k + 1);
 
   useEffect(() => {
     // Signed out (or still checking): drop whatever the last user was looking at,
@@ -221,14 +236,16 @@ export default function ClosetLLM() {
       .catch((err) => setError(err.message));     // network/parse failure
     // Keyed on the user id, not the session object: the session is replaced
     // every time the token refreshes (hourly), and that shouldn't refetch.
-  }, [session?.user.id]);
+    // reloadKey is the one deliberate way to force a refetch.
+  }, [session?.user.id, reloadKey]);
 
   // ── State: the things that change while you use the app ──
   const vp = useViewport();                     // live screen size; drives all the sizing below
   const [picked, setPicked] = useState(null);   // which palette is chosen
   const [menu, setMenu] = useState(null);       // which menu-bar menu is open ("File" or null)
-  const [popupOpen, setPopupOpen] = useState(false); // pink pop-up, opened by the folder icon
-  const [mauveOpen, setMauveOpen] = useState(false); // mauve pop-up, opened by the round icon
+  const [popupOpen, setPopupOpen] = useState(false); // pink pop-up: upload clothing
+  const [inspoOpen, setInspoOpen] = useState(false); // lilac pop-up: upload color inspo
+  const [mauveOpen, setMauveOpen] = useState(false); // mauve pop-up: my clothing
   // Where each window sits. `null` means "you haven't moved this one yet", so it
   // keeps whatever spot the current viewport works out — the main window dead
   // centre, the pop-ups tucked beside it — and re-centres itself on every resize.
@@ -236,6 +253,7 @@ export default function ClosetLLM() {
   // put it, pulled back into view only if the screen gets too small to hold it.
   const [mainAt, setMainAt] = useState(null);
   const [popupAt, setPopupAt] = useState(null);
+  const [inspoAt, setInspoAt] = useState(null);
   const [mauveAt, setMauveAt] = useState(null);
 
   // Early returns. They must stay BELOW every hook above: React needs the same
@@ -262,15 +280,18 @@ export default function ClosetLLM() {
   const scale = clamp((vp.w - GUTTER * 2) / POPUP_W, 0.8, PROFILE_SCALE);
   const popupSize = { w: POPUP_W * scale, h: POPUP_H * scale };
   // A pop-up's parking spot: beside the main window when the screen is wide
-  // enough for both, otherwise centred over it, dropped by `offset` so the two
-  // pop-ups never land on the same pixel.
+  // enough for both, otherwise centred over it, dropped by `offset` so the
+  // pop-ups stack instead of landing on the same pixel.
   const parked = (offset) => {
     const beside = main.x + size.w + GUTTER;
     const room = beside + popupSize.w + GUTTER <= vp.w;
     return onScreen({ x: room ? beside : (vp.w - popupSize.w) / 2, y: main.y + offset }, popupSize, vp);
   };
+  const step = popupSize.h + GUTTER;             // one pop-up's height plus a gap
   const popup = popupAt ? onScreen(popupAt, popupSize, vp) : parked(36);
-  const mauve = mauveAt ? onScreen(mauveAt, popupSize, vp) : parked(36 + popupSize.h + GUTTER);
+  const inspo = inspoAt ? onScreen(inspoAt, popupSize, vp) : parked(36 + step);
+  const mauve = mauveAt ? onScreen(mauveAt, popupSize, vp) : parked(36 + step * 2);
+
   // The icons live to the right of the main window. Once it's centred on a
   // narrow screen there's nowhere to put them — the File menu is the way in.
   const showIcons = vp.w - (main.x + size.w) >= ICON_COL;
@@ -306,15 +327,16 @@ export default function ClosetLLM() {
   }
 
   // One lookup table instead of if/else chains: each draggable window says where
-  // it currently is, how big it draws, and how to move it. Adding a fourth window
-  // later means adding one line here, not editing startDrag.
+  // it currently is, how big it draws, and how to move it. Adding a window means
+  // adding one line here, not editing startDrag.
   const DRAGGABLE = {
     main:  { at: main,  box: size,      moveTo: setMainAt },
     popup: { at: popup, box: popupSize, moveTo: setPopupAt },
+    inspo: { at: inspo, box: popupSize, moveTo: setInspoAt },
     mauve: { at: mauve, box: popupSize, moveTo: setMauveAt },
   };
 
-  // Dragging: works for the big window and both pop-ups.
+  // Dragging: works for the big window and every pop-up.
   // Uses pointer events, so it works with a mouse OR a finger.
   function startDrag(target, e) {
     e.preventDefault();
@@ -394,6 +416,7 @@ export default function ClosetLLM() {
                 }}>
                   {[
                     { label: "upload clothing", isOpen: popupOpen, show: () => setPopupOpen(true) },
+                    { label: "upload color inspo", isOpen: inspoOpen, show: () => setInspoOpen(true) },
                     { label: "my clothing", isOpen: mauveOpen, show: () => setMauveOpen(true) },
                     // signOut fires onAuthStateChange → session becomes null →
                     // the early return above swaps in the sign-in window
@@ -417,7 +440,8 @@ export default function ClosetLLM() {
 
       {/* ── desktop icons ── They sit to the right of the main window, so on a
           screen too narrow to fit both they'd end up underneath it. Hidden in
-          that case; the File menu opens the same two windows. ── */}
+          that case; the File menu opens the same windows. The inspo window has
+          no icon yet (no artwork for it) — File menu only for now. ── */}
       {showIcons && (
       <div style={{ position: "absolute", top: 60, right: 44, display: "grid", gap: 34, justifyItems: "center", width: 150 }}>
         {[
@@ -506,11 +530,10 @@ export default function ClosetLLM() {
                 <div style={{ fontSize: 11, color: "#8a6b78", maxWidth: 250, lineHeight: 1.55 }}>
                   Upload some clothes and a color palette or two, and your matches show up here.
                 </div>
-                <button onClick={() => setPopupOpen(true)} style={{
-                  fontFamily: MONO, fontSize: 9, letterSpacing: ".08em", color: "#7a3557", cursor: "pointer",
-                  padding: "6px 12px", borderRadius: 5, border: "1px solid #d3699f",
-                  background: "linear-gradient(#ffe6f4,#ffd0e9)",
-                }}>UPLOAD CLOTHING</button>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+                  <button onClick={() => setPopupOpen(true)} style={emptyBtn}>UPLOAD CLOTHING</button>
+                  <button onClick={() => setInspoOpen(true)} style={emptyBtn}>UPLOAD COLOR INSPO</button>
+                </div>
               </div>
             ) : !pickedPal ? (
               <div style={{ position: "relative", display: "grid", justifyItems: "center", gap: 14, textAlign: "center", padding: 24 }}>
@@ -547,7 +570,7 @@ export default function ClosetLLM() {
         </div>
       </div>
 
-      {/* ── profile pop-up: static, not tied to picking a palette ── */}
+      {/* ── pink pop-up: upload clothing → POST /upload-garments ── */}
       {popupOpen && (
         <div style={{
           position: "absolute", left: popup.x, top: popup.y, width: POPUP_W, zIndex: 45,
@@ -568,15 +591,39 @@ export default function ClosetLLM() {
             </span>
           </div>
 
-          {/* pop-up body — intentionally empty, reserved for future content */}
-          <div style={{ height: 90 }} />
+          <UploadPanel kind="garment" mono={MONO} onUploaded={reload} />
         </div>
       )}
 
-      {/* ── mauve pop-up: opened by the round desktop icon ── */}
+      {/* ── lilac pop-up: upload color inspo → POST /upload-palettes ── */}
+      {inspoOpen && (
+        <div style={{
+          position: "absolute", left: inspo.x, top: inspo.y, width: POPUP_W, zIndex: 46,
+          borderRadius: 7, background: "linear-gradient(#f3e9ff,#e6d6fa)", border: "1px solid #9f7cc6",
+          boxShadow: "0 12px 28px rgba(100,60,150,.3)",
+          transform: `scale(${scale})`, transformOrigin: "top left",
+        }}>
+          {/* title bar (drag here) */}
+          <div onPointerDown={(e) => startDrag("inspo", e)} style={{
+            height: 26, display: "flex", alignItems: "center", gap: 6, padding: "0 7px",
+            borderRadius: "6px 6px 0 0", background: "linear-gradient(#d9bdfa,#b98ee8)",
+            borderBottom: "1px solid #9a72c9", cursor: "grab", touchAction: "none",
+          }}>
+            <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
+              <span style={{ width: 14, height: 13, border: "1px solid #9a72c9", borderRadius: 2, background: "#eadcff", display: "grid", placeItems: "center", fontSize: 8, color: "#5b3488" }}>{"–"}</span>
+              <span style={{ width: 14, height: 13, border: "1px solid #9a72c9", borderRadius: 2, background: "#eadcff", display: "grid", placeItems: "center", fontSize: 8, color: "#5b3488" }}>{"□"}</span>
+              <span onClick={(e) => { e.stopPropagation(); setInspoOpen(false); }} onPointerDown={(e) => e.stopPropagation()} style={{ width: 14, height: 13, border: "1px solid #9a72c9", borderRadius: 2, background: "#dcc6fb", display: "grid", placeItems: "center", fontSize: 9, color: "#4e2a7a", cursor: "pointer" }}>{"×"}</span>
+            </span>
+          </div>
+
+          <UploadPanel kind="palette" mono={MONO} onUploaded={reload} />
+        </div>
+      )}
+
+      {/* ── mauve pop-up: my clothing (opened by the round desktop icon) ── */}
       {mauveOpen && (
         <div style={{
-          position: "absolute", left: mauve.x, top: mauve.y, width: POPUP_W, zIndex: 46,
+          position: "absolute", left: mauve.x, top: mauve.y, width: POPUP_W, zIndex: 47,
           borderRadius: 7, background: "linear-gradient(#f7dcea,#e8c1d9)", border: "1px solid #a76e8f",
           boxShadow: "0 12px 28px rgba(120,60,100,.3)",
           transform: `scale(${scale})`, transformOrigin: "top left",
