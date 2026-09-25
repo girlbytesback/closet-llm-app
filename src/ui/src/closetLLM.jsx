@@ -123,6 +123,9 @@ function StatusScreen({ text }) {
   );
 }
 
+// Stands in for the matches document when /color-matches 404s on an empty store.
+const EMPTY_CLOSET = { garments: {}, palettes: {}, meta: {} };
+
 const hitCount = (pal) => pal.groups.reduce((n, g) => n + g.hits.length, 0);
 
 // A small colored square + its hex code (each palette has two main colors).
@@ -207,6 +210,10 @@ export default function ClosetLLM() {
     // out, which flips session to null and lands back on the sign-in window.
     authedFetch("/color-matches")
       .then((res) => {
+        // 404 = nothing uploaded yet (a brand-new account). That's a state to
+        // draw, not an error: an empty closet renders the desktop with a
+        // pointer to the upload window instead of "COULD NOT LOAD".
+        if (res.status === 404) return EMPTY_CLOSET;
         if (!res.ok) throw new Error(`server said ${res.status}`);
         return res.json();
       })
@@ -493,7 +500,19 @@ export default function ClosetLLM() {
             boxShadow: "0 1px 3px rgba(0,0,0,.12) inset", display: "grid",
             placeItems: pickedPal ? "start center" : "center", position: "relative", overflowY: "auto",
           }}>
-            {!pickedPal ? (
+            {PALETTES.length === 0 ? (
+              <div style={{ display: "grid", justifyItems: "center", gap: 14, textAlign: "center", padding: 24 }}>
+                <div style={{ fontFamily: MONO, fontSize: 11, color: "#9a5b7c", letterSpacing: ".05em" }}>YOUR CLOSET IS EMPTY</div>
+                <div style={{ fontSize: 11, color: "#8a6b78", maxWidth: 250, lineHeight: 1.55 }}>
+                  Upload some clothes and a color palette or two, and your matches show up here.
+                </div>
+                <button onClick={() => setPopupOpen(true)} style={{
+                  fontFamily: MONO, fontSize: 9, letterSpacing: ".08em", color: "#7a3557", cursor: "pointer",
+                  padding: "6px 12px", borderRadius: 5, border: "1px solid #d3699f",
+                  background: "linear-gradient(#ffe6f4,#ffd0e9)",
+                }}>UPLOAD CLOTHING</button>
+              </div>
+            ) : !pickedPal ? (
               <div style={{ position: "relative", display: "grid", justifyItems: "center", gap: 14, textAlign: "center", padding: 24 }}>
                 <div style={{ width: narrow ? 132 : 190, height: narrow ? 132 : 190, border: "2px dashed #d9a8c4", borderRadius: 10, display: "grid", placeItems: "center", background: "repeating-linear-gradient(-45deg,#fdf3f9 0 8px,#ffffff 8px 16px)" }}>
                   <span style={{ fontFamily: MONO, fontSize: 9, color: "#c58bab", letterSpacing: ".08em" }}>EMPTY STAGE</span>
