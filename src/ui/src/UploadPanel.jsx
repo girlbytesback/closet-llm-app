@@ -82,11 +82,15 @@ export default function UploadPanel({ kind, mono, onUploaded }) {
 
   // ── styles lifted from SignIn.jsx ──
   const label = { fontFamily: mono, fontSize: 8.5, letterSpacing: ".06em", color: "#8a4467" };
+  const btn = {
+    padding: "7px 0", borderRadius: 11, border: "1px solid #dfa4be",
+    background: "linear-gradient(#fffafc,#f7d9e6)", color: "#6b3f52",
+    fontFamily: mono, fontSize: 10, letterSpacing: ".06em",
+  };
 
   return (
     <form onSubmit={submit} style={{ display: "grid", gap: 10, padding: 12 }}>
       <style>{`
-        .upload-drop:focus-within{outline:2px solid #e0398a;outline-offset:1px}
         .upload-btn:focus-visible{outline:2px solid #e0398a;outline-offset:2px}
         .upload-btn:hover:not(:disabled){background:linear-gradient(#fff2f9,#ffc9e6)}
       `}</style>
@@ -95,39 +99,45 @@ export default function UploadPanel({ kind, mono, onUploaded }) {
         {title}
       </div>
 
-      {/* click to browse, or drop photos here */}
-      <label
-        className="upload-drop"
+      {/* Display only: says "choose photos" until something is picked, then
+          shows what was picked. Not clickable — the button below opens the
+          file browser. Dropping photos onto it still works. */}
+      <div
+        className="upload-box"
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={(e) => { e.preventDefault(); setDragging(false); if (!busy) pick(e.dataTransfer.files); }}
         style={{
-          position: "relative", display: "grid", placeItems: "center", gap: 4, minHeight: 70, padding: 10,
+          display: "grid", placeItems: "center", minHeight: 70, padding: 10,
           boxSizing: "border-box", textAlign: "center", borderRadius: 4,
           border: `1px dashed ${dragging ? "#e0398a" : "#dfa4be"}`,
           background: dragging ? "#fff2f9" : "#fffafc",
-          cursor: busy ? "default" : "pointer",
         }}
       >
-        <input ref={inputRef} type="file" accept={ACCEPT} multiple disabled={busy}
-          onChange={(e) => pick(e.target.files)}
-          style={{ position: "absolute", width: 1, height: 1, opacity: 0 }} />
         {files.length ? (
           <span style={{ fontSize: 11, color: "#4a2b38", lineHeight: 1.45 }}>
             {files.length === 1 ? files[0].name : `${files.length} photos picked`}
           </span>
         ) : (
-          <>
-            <span style={label}>choose photos</span>
-            <span style={{ fontSize: 10, color: "#8a6b78" }}>or drop them here · jpg or png</span>
-          </>
+          <span style={label}>choose photos</span>
         )}
-      </label>
+      </div>
+
+      {/* the real file input, hidden; the "choose photos" button clicks it */}
+      <input ref={inputRef} type="file" accept={ACCEPT} multiple disabled={busy}
+        onChange={(e) => pick(e.target.files)} style={{ display: "none" }} />
+
+      <button className="upload-btn" type="button" disabled={busy}
+        onClick={() => inputRef.current?.click()} style={{
+          ...btn,
+          cursor: busy ? "default" : "pointer",
+          opacity: busy ? 0.6 : 1,
+        }}>
+        choose photos
+      </button>
 
       <button className="upload-btn" type="submit" disabled={busy || !files.length} style={{
-        padding: "7px 0", borderRadius: 11, border: "1px solid #dfa4be",
-        background: "linear-gradient(#fffafc,#f7d9e6)", color: "#6b3f52",
-        fontFamily: mono, fontSize: 10, letterSpacing: ".06em",
+        ...btn,
         cursor: busy ? "wait" : files.length ? "pointer" : "default",
         opacity: busy || !files.length ? 0.6 : 1,
       }}>

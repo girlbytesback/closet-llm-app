@@ -8,6 +8,7 @@ export default function SignIn({ wallpaper, mono }) {
   const [mode, setMode] = useState("in");        // "in" = sign in, "up" = create account
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");    // second copy of the password, create-account only
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null);  // { kind: "error" | "info", text }
 
@@ -15,6 +16,13 @@ export default function SignIn({ wallpaper, mono }) {
 
   async function submit(e) {
     e.preventDefault();                          // a real form, so Enter submits and password managers work
+
+    // Caught here, before anything is sent to Supabase.
+    if (creating && password !== confirm) {
+      setMessage({ kind: "error", text: "passwords must match" });
+      return;
+    }
+
     setBusy(true);
     setMessage(null);
 
@@ -32,6 +40,7 @@ export default function SignIn({ wallpaper, mono }) {
     if (creating && !data.session) {
       setMessage({ kind: "info", text: "Account created. Check your email for the confirmation link, then sign in." });
       setMode("in");
+      setConfirm("");
     }
   }
 
@@ -91,6 +100,14 @@ export default function SignIn({ wallpaper, mono }) {
               required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
           </label>
 
+          {creating && (
+            <label style={label}>
+              confirm password
+              <input className="signin-field" style={field} type="password" autoComplete="new-password"
+                required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+            </label>
+          )}
+
           {message && (
             <div role={message.kind === "error" ? "alert" : "status"} style={{
               fontSize: 11, lineHeight: 1.5,
@@ -108,7 +125,7 @@ export default function SignIn({ wallpaper, mono }) {
           </button>
 
           <button className="signin-link" type="button"
-            onClick={() => { setMode(creating ? "in" : "up"); setMessage(null); }}
+            onClick={() => { setMode(creating ? "in" : "up"); setMessage(null); setConfirm(""); }}
             style={{ background: "none", border: "none", padding: 0, cursor: "pointer",
               fontFamily: mono, fontSize: 9, letterSpacing: ".06em",
               color: "#c0468f", textDecoration: "underline", justifySelf: "center" }}>

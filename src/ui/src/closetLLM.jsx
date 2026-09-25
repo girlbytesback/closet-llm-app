@@ -6,6 +6,7 @@ import UploadPanel from "./UploadPanel";
 
 import heartButton from "./assets/icon-heart-button.png";
 import flowerButton from "./assets/icon-flower-button.png";
+import starButton from "./assets/icon-star-button.png";
 
 // Desktop wallpaper: cream, with black dots on a staggered lattice. Measured off
 // the reference photo (cream #f6f3e0, ~5px dots, one every 34px on the diagonal)
@@ -440,12 +441,12 @@ export default function ClosetLLM() {
 
       {/* ── desktop icons ── They sit to the right of the main window, so on a
           screen too narrow to fit both they'd end up underneath it. Hidden in
-          that case; the File menu opens the same windows. The inspo window has
-          no icon yet (no artwork for it) — File menu only for now. ── */}
+          that case; the File menu opens the same windows. ── */}
       {showIcons && (
       <div style={{ position: "absolute", top: 60, right: 44, display: "grid", gap: 34, justifyItems: "center", width: 150 }}>
         {[
           { label: "upload clothing", icon: heartButton, open: () => setPopupOpen(true) },
+          { label: "upload color inspo", icon: starButton, open: () => setInspoOpen(true) },
           { label: "my clothing", icon: flowerButton, open: () => setMauveOpen(true) },
         ].map((f) => (
           <div key={f.label} onClick={f.open} style={{ display: "grid", justifyItems: "center", gap: 7, cursor: "pointer" }}>
