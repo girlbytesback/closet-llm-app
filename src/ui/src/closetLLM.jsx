@@ -446,7 +446,9 @@ export default function ClosetLLM() {
       <div style={{ position: "absolute", top: 60, right: 44, display: "grid", gap: 34, justifyItems: "center", width: 150 }}>
         {[
           { label: "upload clothing", icon: heartButton, open: () => setPopupOpen(true) },
-          { label: "upload color inspo", icon: starButton, open: () => setInspoOpen(true) },
+          // The star fills the same square as the others, but its points leave the
+          // corners empty, so it reads smaller. scale bumps it up to match by eye.
+          { label: "upload inspo", icon: starButton, scale: 1.75, open: () => setInspoOpen(true) },
           { label: "my clothing", icon: flowerButton, open: () => setMauveOpen(true) },
         ].map((f) => (
           <div key={f.label} onClick={f.open} style={{ display: "grid", justifyItems: "center", gap: 7, cursor: "pointer" }}>
@@ -455,6 +457,8 @@ export default function ClosetLLM() {
             <img src={f.icon} alt="" draggable={false} style={{
               width: ICON_SIZE, height: ICON_SIZE, objectFit: "contain", display: "block",
               filter: "drop-shadow(2px 3px 0 rgba(160,60,110,.25))",
+              // transform, not a bigger width: grows the picture without moving the label or the gaps
+              transform: f.scale ? `scale(${f.scale})` : undefined,
             }} />
             <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: ".08em", color: "#7a3557" }}>{f.label}</span>
           </div>
