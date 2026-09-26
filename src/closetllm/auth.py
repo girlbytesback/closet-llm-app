@@ -19,7 +19,7 @@ def current_user(request: Request) -> str:
     scheme, _, token = header.partition(" ")
 
     if scheme.lower() != "bearer" or not token:
-        token = request.get(COOKIE, "")
+        token = request.cookies.get(COOKIE, "")
 
     if not token:
         raise HTTPException(status_code=401, detail="user not signed in")

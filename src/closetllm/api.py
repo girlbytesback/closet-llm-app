@@ -164,6 +164,13 @@ def corrupt_data(request: Request, exc: json.JSONDecodeError):
 # html=True serves index.html at "/", which is what makes this a single-origin
 # deployment: one process answers both the HTML and the JSON, so there is no
 # CORS in production.
+@app.middleware("http")
+async def no_cache_html(request: Request, call_next):
+    response = await call_next(request)
+    if response.headers.get("content-type", "").startswith("text/html"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
 ui_dist = project_root / "src/ui/dist"
 if ui_dist.exists():
     app.mount("/", StaticFiles(directory=ui_dist, html=True), name="ui")
