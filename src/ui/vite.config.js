@@ -7,6 +7,7 @@ export default defineConfig({
     proxy: {
       "/color-matches": "http://localhost:8000",
       "/garments": "http://localhost:8000",
+      "/session": "http://localhost:8000",
       "/stats": "http://localhost:8000",
       "/upload-garments": "http://localhost:8000",
       "/upload-palettes": "http://localhost:8000",
