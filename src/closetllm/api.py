@@ -165,10 +165,15 @@ def corrupt_data(request: Request, exc: json.JSONDecodeError):
 # deployment: one process answers both the HTML and the JSON, so there is no
 # CORS in production.
 @app.middleware("http")
-async def no_cache_html(request: Request, call_next):
+async def cache_policy(request: Request, call_next):
     response = await call_next(request)
-    if response.headers.get("content-type", "").startswith("text/html"):
+    ctype = response.headers.get("content-type", "")
+
+    if ctype.startswith("text/html"):
         response.headers["Cache-Control"] = "no-cache"
+    elif request.url.path.startswith("/assets/"):
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+
     return response
 
 ui_dist = project_root / "src/ui/dist"
