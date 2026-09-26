@@ -12,8 +12,9 @@ import { authedFetch } from "./api";
 // purpose — each one is a Claude call, and firing them all at once would just
 // race each other into the daily limit.
 //
-// onUploaded() runs once at the end if at least one photo made it in, so the
-// parent can refetch /color-matches and the new stuff shows up.
+// onUploaded(lastName) runs once at the end if at least one photo made it in,
+// with the filename of the last one that did, so the parent can refetch
+// /color-matches and put the new thing on stage.
 
 const KINDS = {
   garment: { route: "/upload-garments", title: "add to your closet" },
@@ -51,6 +52,7 @@ export default function UploadPanel({ kind, mono, onUploaded }) {
     setResults([]);
 
     let anyOk = false;
+    let lastOk = null;                 // filename of the last successful upload
     for (const file of files) {
       // multipart/form-data. The key "file" has to match the parameter name in
       // `def upload_garment(file: UploadFile = File(), ...)`. Don't set a
@@ -64,6 +66,7 @@ export default function UploadPanel({ kind, mono, onUploaded }) {
         const json = await res.json().catch(() => ({}));
         if (res.ok) {
           anyOk = true;
+          lastOk = json.name;
           result = { name: json.name, colors: json.colors };
         } else {
           result = { name: file.name, error: explain(res.status, json.detail) };
@@ -77,7 +80,7 @@ export default function UploadPanel({ kind, mono, onUploaded }) {
     setBusy(false);
     setFiles([]);
     if (inputRef.current) inputRef.current.value = ""; // lets you re-pick the same file
-    if (anyOk) onUploaded?.();
+    if (anyOk) onUploaded?.(lastOk);
   }
 
   // ── styles lifted from SignIn.jsx ──
