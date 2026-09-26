@@ -110,12 +110,9 @@ def color_matches(
     palettes = db.load_user_colors(db.palettes, user_id)
 
     # 2. the color math (pure; doesn't know about db or storage). An empty
-    #    store is a 404 like /garments, not a 500 — "extract something first"
-    #    is a state the UI renders, not a bug.
-    try:
-        results = compute_matches(garments, palettes, cutoff)
-    except FileNotFoundError as err:
-        raise HTTPException(status_code=404, detail=str(err))
+    #    side is a state the UI draws — no palettes → {}, no garments →
+    #    swatches with no hits — so it is a 200 here, not a 404.
+    results = compute_matches(garments, palettes, cutoff)
     doc = build_matches(garments, results, cutoff)
 
     # 3. swap in photo links from the bucket

@@ -20,12 +20,9 @@ from closetllm.config import (
 from closetllm.extract import load_data, save_data
 
 def compute_matches(garments: dict, palettes: dict, cutoff: float = default_cutoff) -> dict:
-    # palettes first: with nothing saved at all, "extract some inspiration" is
-    # the more useful of the two errors, and the API turns it into the 404
-    if not palettes:
-        raise FileNotFoundError("no color palettes saved yet")
-    if not garments:
-        raise FileNotFoundError("no clothes saved yet")
+    # an empty side is a valid input: no palettes gives {}, no garments gives
+    # every swatch an empty hit list. The API draws both; only the CLI
+    # (run_matches) still treats them as errors.
     return {
         name: matches_for_color_palette(palette_colors, garments, cutoff)
         for name, palette_colors in sorted(palettes.items())
@@ -96,6 +93,12 @@ def run_matches(
     # not anybody's rows. The API reads the same functions off the database.
     garments = load_data(garment_hex_colors)
     palettes = load_data(palette_hex_colors)
+
+    # check if empty occurs before running compute()
+    if not palettes:
+        raise FileNotFoundError("no color palettes saved yet")
+    if not garments:
+        raise FileNotFoundError("no clothes saved yet")
 
     # the printout and the exported file are the same set of matches, both cut
     # at the same cutoff — what you read in the terminal is what the UI gets

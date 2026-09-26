@@ -187,21 +187,6 @@ def test_the_ceiling_itself_is_allowed(client, seeded):
     assert client.get("/color-matches", params={"cutoff": max_cutoff}).status_code == 200
 
 
-def test_matches_is_404_when_nothing_is_extracted(client):
-    response = client.get("/color-matches")
-
-    assert response.status_code == 404
-    assert "no color palettes saved yet" in response.json()["detail"]
-
-
-def test_matches_is_404_when_only_palettes_exist(client, fake_db):
-    fake_db.seed(db.palettes, TEST_USER, SAMPLE_PALETTES)
-    response = client.get("/color-matches")
-
-    assert response.status_code == 404
-    assert "no clothes saved yet" in response.json()["detail"]
-
-
 def test_every_garment_entry_carries_colors_and_a_src(client, seeded, fake_storage):
     # "src" is a signed bucket link, minted per request — the UI never builds a
     # photo URL itself, it renders whatever this hands it.

@@ -43,23 +43,6 @@ def document(cutoff=default_cutoff):
 
 # -------------------------------------------------------------- compute_matches
 
-def test_compute_matches_raises_when_no_palettes_are_saved():
-    with pytest.raises(FileNotFoundError, match="no color palettes saved yet"):
-        compute_matches(SAMPLE_GARMENTS, {}, default_cutoff)
-
-
-def test_compute_matches_raises_when_no_garments_are_saved():
-    with pytest.raises(FileNotFoundError, match="no clothes saved yet"):
-        compute_matches({}, {"p.jpeg": [SAGE]}, default_cutoff)
-
-
-def test_an_empty_everything_names_the_palettes_first():
-    # both are missing, and "go extract some inspiration" is the more useful of
-    # the two answers; the API turns whichever comes out into the 404 detail
-    with pytest.raises(FileNotFoundError, match="no color palettes saved yet"):
-        compute_matches({}, {}, default_cutoff)
-
-
 def test_compute_matches_keys_by_palette_then_by_palette_colour():
     results = matches()
 
