@@ -1,5 +1,8 @@
 from pydantic import BaseModel
 
+class SessionRequest(BaseModel):
+    access_token: str
+
 class StatsResponse(BaseModel):
     ok: bool
     garments: int

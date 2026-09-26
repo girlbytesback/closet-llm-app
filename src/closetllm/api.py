@@ -5,6 +5,7 @@ from fastapi import (
     Request, 
     File, 
     UploadFile, 
+    Response,
     Depends
 )
 
@@ -22,14 +23,16 @@ from closetllm.schemas import (
     GarmentsResponse,
     PalettesResponse,
     StatsResponse,
-    UploadResponse
+    UploadResponse,
+    SessionRequest
 )
-from closetllm.auth import current_user
+from closetllm.auth import current_user, verify, COOKIE
 from closetllm.ingest import ingest
 from closetllm import db, storage
 
 import json
 import logging
+import time
 
 
 log = logging.getLogger("closetllm")
@@ -48,6 +51,27 @@ def health():
 # they are in that group; the two upload routes take the id as an argument
 # because the row they write is owned.
 auth_required = [Depends(current_user)]
+
+# NEW SESSION
+
+@app.post("/session")
+def create_session(body: SessionRequest, response: Response):
+    claims = verify(body.access_token)           # 401 "bad token" if it's not a real supabase jwt
+    response.set_cookie(
+        key=COOKIE,
+        value=body.access_token,
+        httponly=True,        # javascript can't read it
+        secure=True,          # https only (chrome allows it on localhost too)
+        samesite="lax",       # other sites can't POST with it
+        max_age=max(0, int(claims["exp"] - time.time())),   # dies when the jwt does
+        path="/",
+    )
+    return {"ok": True}
+
+@app.delete("/session")
+def delete_session(response: Response):
+    response.delete_cookie(COOKIE, path="/")
+    return {"ok": True}
 
 @app.get("/stats", response_model=StatsResponse, dependencies=auth_required)
 def stats():
