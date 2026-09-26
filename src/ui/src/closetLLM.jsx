@@ -27,35 +27,11 @@ const WALLPAPER = {
 // Font used for the little pixel-style labels.
 const MONO = "Silkscreen, monospace";
 
-// The one palette detail matches.json doesn't carry, because it isn't a fact
-// about the photo — it's display copy. Colors, image paths and matched garments
-// all come out of the JSON, so nothing here can drift from data/colors.json.
-// A palette with no entry falls back to its number.
-const NAMES = {
-  "color_palette_1.jpeg": "OLIVE & DENIM",
-  "color_palette_2.jpeg": "OCHRE & BABY PINK",
-  "color_palette_3.jpeg": "GREEN GLOW & BURGUNDY",
-  "color_palette_4.jpeg": "BUTTER & PINK",
-  "color_palette_5.jpeg": "MALACHITE & MERLOT",
-  "color_palette_6.jpeg": "CORAL & DARK GREY",
-  "color_palette_7.jpeg": "PLUM & SILVER",
-  "color_palette_8.jpeg": "MAUVE & BLACK",
-  "color_palette_9.jpeg": "OLIVE & MAGENTA",
-  "color_palette_10.jpeg": "SAGE & PEACH",
-  "color_palette_11.jpeg": "PUMPKIN & ROBIN EGG",
-  "color_palette_12.jpeg": "PEAR & CHARCOAL",
-  "color_palette_13.jpeg": "FAWN & MAGENTA",
-  "color_palette_14.jpeg": "ESPRESSO & BABY BLUE",
-  "color_palette_15.jpeg": "SKY BLUE & CHESTNUT",
-  "color_palette_16.jpeg": "RED & AMETHYST",
-  "color_palette_17.jpeg": "LILAC & BERRY",
-  "color_palette_18.jpeg": "APPLE & PUMPKIN",
-  "color_palette_19.jpeg": "AZURE & RASPBERRY",
-};
-
-// "color_palette_10.jpeg" -> 10. Sorting on the number keeps 2 before 10,
-// which sorting on the filename wouldn't.
-const number = (file) => Number(file.match(/\d+/)?.[0] ?? 0);
+// A palette is labelled by its own filename with the extension dropped:
+// "sage_palette.jpeg" → "sage_palette". Every palette arrives by upload now, so
+// nothing about it can be known ahead of time — the name the user gave the file
+// is the only name there is. (This replaces the old NAMES table.)
+const stem = (file) => file.replace(/\.[^.]+$/, "");
 
 // ── Layout geometry ─────────────────────────────────────────────────────────
 // Every size here is an ideal, not a promise: each one gets measured against the
@@ -128,10 +104,19 @@ function StatusScreen({ text }) {
   );
 }
 
-// Stands in for the matches document when /color-matches 404s on an empty store.
+// Stands in for the matches document if the API answers 404. The current API
+// never does (an empty closet is a 200 with empty sections), so this only fires
+// against a server that predates that change — harmless to keep.
 const EMPTY_CLOSET = { garments: {}, palettes: {}, meta: {} };
 
 const hitCount = (pal) => pal.groups.reduce((n, g) => n + g.hits.length, 0);
+
+// The empty-state buttons. Same look wherever they appear.
+const emptyBtn = {
+  fontFamily: MONO, fontSize: 9, letterSpacing: ".08em", color: "#7a3557", cursor: "pointer",
+  padding: "6px 12px", borderRadius: 5, border: "1px solid #d3699f",
+  background: "linear-gradient(#ffe6f4,#ffd0e9)",
+};
 
 // A small colored square + its hex code (each palette has two main colors).
 function Swatch({ hex }) {
@@ -143,38 +128,43 @@ function Swatch({ hex }) {
   );
 }
 
-// One garment photo, straight out of the closet folder. The number under it is
-// the color distance — lower is closer, so the list already reads best-first.
-function Garment({ hit, size }) {
-  // A garment photo may be absent once we deploy (the garments/ folder is
-  // gitignored). If the image 404s, fall back to a labeled swatch instead of a
-  // broken-image icon, so the match is still visible.
+// One garment thumbnail. `src` is the signed bucket link the API minted; if it's
+// missing or fails to load (a link that expired, a bucket object that never got
+// written), draw a swatch in the colour the garment was read as instead of a
+// broken-image icon, so the piece is still visible. `caption` is whatever the
+// caller wants under it: the match score in the palette view, the hex code in
+// the closet grid.
+function Garment({ name, src, hex, size, caption }) {
   const [broken, setBroken] = useState(false);
+  // a fresh fetch mints fresh links, so a new src gets a fresh chance to load
+  useEffect(() => setBroken(false), [src]);
+  const tip = `${name} · ${caption}`;
   return (
     <div style={{ display: "grid", justifyItems: "center", gap: 3 }}>
-      {broken || !hit.src ? (
-        <div title={`${hit.garment} · ${hit.score}`} style={{
+      {broken || !src ? (
+        <div title={tip} style={{
           width: size, height: size, borderRadius: 4, border: "1px solid #e79cc4",
-          background: hit.hex ?? "#f0d0e0", display: "grid", placeItems: "center",
+          background: hex ?? "#f0d0e0", display: "grid", placeItems: "center", overflow: "hidden",
           fontFamily: MONO, fontSize: 6, color: "#fff", textAlign: "center", padding: 2, boxSizing: "border-box",
-        }}>{hit.garment}</div>
+        }}>{name}</div>
       ) : (
         <img
-          src={hit.src}
-          alt={hit.garment}
-          title={`${hit.garment} · ${hit.score}`}
+          src={src}
+          alt={name}
+          title={tip}
           draggable={false}
           onError={() => setBroken(true)}
           style={{ width: size, height: size, objectFit: "cover", borderRadius: 4, border: "1px solid #e79cc4", background: "#fff", display: "block" }}
         />
       )}
-      <span style={{ fontFamily: MONO, fontSize: 7, color: "#c0468f" }}>{hit.score.toFixed(1)}</span>
+      <span style={{ fontFamily: MONO, fontSize: 7, color: "#c0468f" }}>{caption}</span>
     </div>
   );
 }
 
 // Everything that matched one of the palette's colors: the swatch, then the
-// garments themselves.
+// garments themselves. The number under each garment is the color distance —
+// lower is closer, and the list already reads best-first.
 function MatchRow({ group, size }) {
   return (
     <div style={{ display: "grid", gap: 5, justifyItems: "start" }}>
@@ -186,19 +176,48 @@ function MatchRow({ group, size }) {
       </div>
       {group.hits.length > 0 && (
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {group.hits.map((hit) => <Garment key={hit.garment} hit={hit} size={size} />)}
+          {group.hits.map((hit) => (
+            <Garment key={hit.garment} name={hit.garment} src={hit.src} hex={hit.hex} size={size} caption={hit.score.toFixed(1)} />
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-// The empty-closet screen's two buttons. Same look, different window.
-const emptyBtn = {
-  fontFamily: MONO, fontSize: 9, letterSpacing: ".08em", color: "#7a3557", cursor: "pointer",
-  padding: "6px 12px", borderRadius: 5, border: "1px solid #d3699f",
-  background: "linear-gradient(#ffe6f4,#ffd0e9)",
-};
+// The body of the "my clothing" pop-up: every garment in the closet, matched or
+// not, with the colour it was read as underneath. It reads data.garments straight
+// off the matches document — the API lists the whole closet there, not just the
+// pieces that scored — so no second fetch is needed.
+function ClosetGrid({ garments, onUpload }) {
+  const pieces = Object.entries(garments); // [[name, { colors, src }], …]
+  if (pieces.length === 0) {
+    return (
+      <div style={{ display: "grid", justifyItems: "center", gap: 10, padding: 14, textAlign: "center" }}>
+        <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: ".06em", color: "#6d3352" }}>NOTHING IN HERE YET</div>
+        <div style={{ fontSize: 11, color: "#7a4a63", lineHeight: 1.5, maxWidth: 220 }}>
+          Upload some clothing and it shows up here.
+        </div>
+        <button onClick={onUpload} style={emptyBtn}>UPLOAD CLOTHING</button>
+      </div>
+    );
+  }
+  return (
+    <div style={{ display: "grid", gap: 8, padding: 10 }}>
+      <div style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: ".08em", color: "#6d3352" }}>
+        {`YOUR CLOSET · ${pieces.length} PIECE${pieces.length > 1 ? "S" : ""}`}
+      </div>
+      <div className="closet" style={{
+        display: "grid", gridTemplateColumns: "repeat(auto-fill, 56px)", justifyContent: "center",
+        gap: 8, maxHeight: 236, overflowY: "auto", paddingBottom: 2,
+      }}>
+        {pieces.map(([name, garment]) => (
+          <Garment key={name} name={name} src={garment.src} hex={garment.colors[0]} size={56} caption={garment.colors[0]} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function ClosetLLM() {
   // ── Who's signed in ──
@@ -226,10 +245,7 @@ export default function ClosetLLM() {
     // out, which flips session to null and lands back on the sign-in window.
     authedFetch("/color-matches")
       .then((res) => {
-        // 404 = nothing uploaded yet (a brand-new account). That's a state to
-        // draw, not an error: an empty closet renders the desktop with a
-        // pointer to the upload window instead of "COULD NOT LOAD".
-        if (res.status === 404) return EMPTY_CLOSET;
+        if (res.status === 404) return EMPTY_CLOSET;   // see EMPTY_CLOSET
         if (!res.ok) throw new Error(`server said ${res.status}`);
         return res.json();
       })
@@ -242,7 +258,7 @@ export default function ClosetLLM() {
 
   // ── State: the things that change while you use the app ──
   const vp = useViewport();                     // live screen size; drives all the sizing below
-  const [picked, setPicked] = useState(null);   // which palette is chosen
+  const [picked, setPicked] = useState(null);   // which palette is chosen (its filename)
   const [menu, setMenu] = useState(null);       // which menu-bar menu is open ("File" or null)
   const [popupOpen, setPopupOpen] = useState(false); // pink pop-up: upload clothing
   const [inspoOpen, setInspoOpen] = useState(false); // lilac pop-up: upload color inspo
@@ -297,15 +313,13 @@ export default function ClosetLLM() {
   // narrow screen there's nowhere to put them — the File menu is the way in.
   const showIcons = vp.w - (main.x + size.w) >= ICON_COL;
 
-  // matches.json is keyed by filename and points at garments by name. The UI
+  // The document is keyed by filename and points at garments by name. The UI
   // wants a sorted list of ready-to-draw objects, so that join happens once here
-  // instead of inside every component that renders a garment. (Was a top-level
-  // const; now lives here because it depends on the fetched data.)
+  // instead of inside every component that renders a garment.
   const PALETTES = Object.entries(data.palettes)
     .map(([file, palette]) => ({
       id: file,
-      cue: String(number(file)).padStart(2, "0"),
-      name: NAMES[file] ?? `PALETTE ${String(number(file)).padStart(2, "0")}`,
+      name: stem(file),
       img: palette.src,
       colors: palette.colors,
       // one group per palette color — a palette asks two separate questions, so
@@ -315,14 +329,19 @@ export default function ClosetLLM() {
         hits: (palette.matches[hex] ?? []).map((hit) => ({
           ...hit,
           src: data.garments[hit.garment]?.src,
+          hex: data.garments[hit.garment]?.colors[0],   // the fallback swatch colour
         })),
       })),
     }))
-    .sort((a, b) => number(a.id) - number(b.id));
+    // numeric-aware, so "palette_2" lands before "palette_10" (a plain string
+    // sort would not do that); otherwise alphabetical by filename
+    .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))
+    // the little number on each card is just its place in the list
+    .map((pal, i) => ({ ...pal, cue: String(i + 1).padStart(2, "0") }));
 
+  const garmentCount = Object.keys(data.garments).length;
   const pickedPal = PALETTES.find((p) => p.id === picked);
 
-  // Pick a palette — no longer touches the (now static) pop-up.
   function open(pal) {
     setPicked(pal.id);
   }
@@ -357,7 +376,7 @@ export default function ClosetLLM() {
   }
 
   return (
-    // The whole desktop = the whole screen. The plaid wallpaper fills every
+    // The whole desktop = the whole screen. The dotted wallpaper fills every
     // pixel, and the windows float on top of it. No bars, any screen size.
     <div style={{
       position: "relative", width: "100%", height: "100%", overflow: "hidden",
@@ -376,6 +395,8 @@ export default function ClosetLLM() {
         .pal-list::-webkit-scrollbar-thumb{background:#e79cc4;border-radius:4px}
         .stage::-webkit-scrollbar{width:8px}
         .stage::-webkit-scrollbar-thumb{background:#e79cc4;border-radius:4px}
+        .closet::-webkit-scrollbar{width:8px}
+        .closet::-webkit-scrollbar-thumb{background:#c78cb0;border-radius:4px}
       `}</style>
 
       {/* Click-catcher: any click outside the open menu closes it. Rendered
@@ -511,9 +532,10 @@ export default function ClosetLLM() {
                   background: active ? "linear-gradient(#fff2f9,#ffdcef)" : "linear-gradient(#fffdfe,#fdf1f6)",
                   boxShadow: active ? "0 0 0 2px rgba(224,57,138,.22)" : "0 1px 2px rgba(0,0,0,.08)",
                 }}>
-                  <img src={pal.img} alt={pal.name} draggable={false} style={{ width: "100%", height: narrow ? 70 : 84, objectFit: "cover", borderRadius: 4, display: "block" }} />
+                  <img src={pal.img} alt={pal.name} draggable={false} style={{ width: "100%", height: narrow ? 70 : 84, objectFit: "cover", borderRadius: 4, display: "block", background: "#fff" }} />
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 5, gap: 4 }}>
-                    <span style={{ fontFamily: MONO, fontSize: 7, letterSpacing: ".02em", color: "#8a4467", lineHeight: 1.2 }}>{pal.name}</span>
+                    {/* a long filename gets cut with an ellipsis rather than wrapping the card */}
+                    <span title={pal.name} style={{ fontFamily: MONO, fontSize: 7, letterSpacing: ".02em", color: "#8a4467", lineHeight: 1.2, textTransform: "uppercase", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pal.name}</span>
                     <span style={{ fontFamily: MONO, fontSize: 7.5, color: "#d0459a", flex: "none" }}>{pal.cue}</span>
                   </div>
                 </div>
@@ -530,16 +552,31 @@ export default function ClosetLLM() {
             placeItems: pickedPal ? "start center" : "center", position: "relative", overflowY: "auto",
           }}>
             {PALETTES.length === 0 ? (
-              <div style={{ display: "grid", justifyItems: "center", gap: 14, textAlign: "center", padding: 24 }}>
-                <div style={{ fontFamily: MONO, fontSize: 11, color: "#9a5b7c", letterSpacing: ".05em" }}>YOUR CLOSET IS EMPTY</div>
-                <div style={{ fontSize: 11, color: "#8a6b78", maxWidth: 250, lineHeight: 1.55 }}>
-                  Upload some clothes and a color palette or two, and your matches show up here.
+              garmentCount === 0 ? (
+                // nothing at all yet
+                <div style={{ display: "grid", justifyItems: "center", gap: 14, textAlign: "center", padding: 24 }}>
+                  <div style={{ fontFamily: MONO, fontSize: 11, color: "#9a5b7c", letterSpacing: ".05em" }}>YOUR CLOSET IS EMPTY</div>
+                  <div style={{ fontSize: 11, color: "#8a6b78", maxWidth: 250, lineHeight: 1.55 }}>
+                    Upload some clothes and a color palette or two, and your matches show up here.
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+                    <button onClick={() => setPopupOpen(true)} style={emptyBtn}>UPLOAD CLOTHING</button>
+                    <button onClick={() => setInspoOpen(true)} style={emptyBtn}>UPLOAD COLOR INSPO</button>
+                  </div>
                 </div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
-                  <button onClick={() => setPopupOpen(true)} style={emptyBtn}>UPLOAD CLOTHING</button>
-                  <button onClick={() => setInspoOpen(true)} style={emptyBtn}>UPLOAD COLOR INSPO</button>
+              ) : (
+                // clothes are in, but there's nothing to match them against yet
+                <div style={{ display: "grid", justifyItems: "center", gap: 14, textAlign: "center", padding: 24 }}>
+                  <div style={{ fontFamily: MONO, fontSize: 11, color: "#9a5b7c", letterSpacing: ".05em" }}>NO COLOR INSPO YET</div>
+                  <div style={{ fontSize: 11, color: "#8a6b78", maxWidth: 250, lineHeight: 1.55 }}>
+                    {`${garmentCount} piece${garmentCount > 1 ? "s" : ""} in your closet and nothing to match them against. Upload a color palette or two.`}
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+                    <button onClick={() => setInspoOpen(true)} style={emptyBtn}>UPLOAD COLOR INSPO</button>
+                    <button onClick={() => setMauveOpen(true)} style={emptyBtn}>MY CLOTHING</button>
+                  </div>
                 </div>
-              </div>
+              )
             ) : !pickedPal ? (
               <div style={{ position: "relative", display: "grid", justifyItems: "center", gap: 14, textAlign: "center", padding: 24 }}>
                 <div style={{ width: narrow ? 132 : 190, height: narrow ? 132 : 190, border: "2px dashed #d9a8c4", borderRadius: 10, display: "grid", placeItems: "center", background: "repeating-linear-gradient(-45deg,#fdf3f9 0 8px,#ffffff 8px 16px)" }}>
@@ -547,27 +584,35 @@ export default function ClosetLLM() {
                 </div>
                 <div style={{ fontFamily: MONO, fontSize: 11, color: "#9a5b7c", letterSpacing: ".05em" }}>NO PALETTE SELECTED</div>
                 <div style={{ fontSize: 11, color: "#8a6b78", maxWidth: 250, lineHeight: 1.55 }}>
-                  {`Click a palette ${narrow ? "above" : "on the left"}.`} A profile window opens beside this one.
+                  {`Click a palette ${narrow ? "above" : "on the left"}.`} Its matches open here.
                   <span style={{ animation: "blink 1.1s steps(1) infinite", color: "#d0459a" }}>&nbsp;{"▦"}</span>
                 </div>
               </div>
             ) : (
               <div style={{ position: "relative", display: "grid", justifyItems: "center", gap: 14, padding: 20, width: "100%", boxSizing: "border-box" }}>
                 <img src={pickedPal.img} alt={pickedPal.name} draggable={false} style={{ width: narrow ? 150 : 220, height: narrow ? 150 : 220, objectFit: "contain", borderRadius: 6, background: "#fff" }} />
-                <div style={{ fontFamily: MONO, fontSize: 15, letterSpacing: ".06em", color: "#4a2b38", textAlign: "center" }}>{pickedPal.name}</div>
+                <div style={{ fontFamily: MONO, fontSize: 15, letterSpacing: ".06em", color: "#4a2b38", textAlign: "center", textTransform: "uppercase", maxWidth: "100%", overflowWrap: "anywhere" }}>{pickedPal.name}</div>
 
                 {/* what this palette pulls out of the closet */}
                 <div style={{ width: "100%", borderTop: "1px dashed #e3c3d5", paddingTop: 12, display: "grid", gap: 12 }}>
                   <div style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: ".08em", color: "#c0468f" }}>
                     {`YOUR CLOSET · ${hitCount(pickedPal)} MATCHES`}
                   </div>
-                  {hitCount(pickedPal) === 0 ? (
+                  {/* the swatches always draw, so the palette's own colors are
+                      visible even when nothing in the closet is close to them */}
+                  {pickedPal.groups.map((group) => <MatchRow key={group.hex} group={group} size={narrow ? 56 : 70} />)}
+                  {garmentCount === 0 ? (
+                    <div style={{ display: "grid", gap: 8, justifyItems: "start" }}>
+                      <div style={{ fontSize: 11, color: "#8a6b78", lineHeight: 1.55 }}>
+                        Nothing in your closet yet. Upload some clothing and the matches show up here.
+                      </div>
+                      <button onClick={() => setPopupOpen(true)} style={emptyBtn}>UPLOAD CLOTHING</button>
+                    </div>
+                  ) : hitCount(pickedPal) === 0 ? (
                     <div style={{ fontSize: 11, color: "#8a6b78", lineHeight: 1.55 }}>
                       Nothing you own scores under {data.meta.cutoff} against these colors.
                     </div>
-                  ) : (
-                    pickedPal.groups.map((group) => <MatchRow key={group.hex} group={group} size={narrow ? 56 : 70} />)
-                  )}
+                  ) : null}
                 </div>
               </div>
             )}
@@ -596,6 +641,8 @@ export default function ClosetLLM() {
             </span>
           </div>
 
+          {/* a successful upload refetches /color-matches, so the piece lands in
+              the "my clothing" window and in any palette it scores against */}
           <UploadPanel kind="garment" mono={MONO} onUploaded={reload} />
         </div>
       )}
@@ -621,7 +668,10 @@ export default function ClosetLLM() {
             </span>
           </div>
 
-          <UploadPanel kind="palette" mono={MONO} onUploaded={reload} />
+          {/* If UploadPanel hands back the filename of the last upload, that
+              palette is selected as soon as the refetch lands, so the inspo you
+              just added is the one on stage. With no name, it just refetches. */}
+          <UploadPanel kind="palette" mono={MONO} onUploaded={(name) => { if (name) setPicked(name); reload(); }} />
         </div>
       )}
 
@@ -646,8 +696,8 @@ export default function ClosetLLM() {
             </span>
           </div>
 
-          {/* body — intentionally empty, reserved for future content */}
-          <div style={{ height: 90 }} />
+          {/* the closet itself: every garment the API returned, hex underneath */}
+          <ClosetGrid garments={data.garments} onUpload={() => setPopupOpen(true)} />
         </div>
       )}
 
